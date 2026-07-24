@@ -1,0 +1,203 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Reportes y Adeudos - Admin ITST{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2>Centro de Reportes y Cumplimiento</h2>
+            <p>Monitorea el progreso institucional y genera documentos de auditoría oficial.</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Columna Izquierda: Exportación -->
+    <div class="col-lg-7">
+        <div class="content-card h-100">
+            <div class="content-card-header">
+                <h3 class="d-flex align-items-center gap-2 text-success">
+                    <i class="bi bi-file-earmark-excel-fill"></i> Exportar Bitácora de Adeudos
+                </h3>
+            </div>
+            <div class="content-card-body">
+                <p class="text-secondary small mb-4">
+                    Genera un reporte detallado en Excel siguiendo el formato oficial del ITST. Las deudas se calculan 
+                    automáticamente comparando el progreso del alumno contra el calendario oficial configurado.
+                </p>
+
+                <form action="/admin/reporte/adeudos" method="GET">
+                    <div class="mb-4">
+                        <label class="form-label text-secondary small fw-medium text-uppercase mb-2">Filtrar Carrera Específica</label>
+                        <select name="carrera" class="form-select form-select-lg">
+                            <option value="TODAS">Todas las carreras autorizadas</option>
+                            <option value="sistemas">Ingeniería en Sistemas Computacionales</option>
+                            <option value="INGENIERÍA EN INFORMÁTICA">Ingeniería Informática</option>
+                            <option value="industrial">Ingeniería Industrial</option>
+                            <option value="gestion">Ingeniería en Gestión Empresarial</option>
+                            <option value="mecatronica">Ingeniería Mecatrónica</option>
+                            <option value="alimentarias">Ingeniería en Industrias Alimentarias</option>
+                            <option value="animacion">Licenciatura en Animación Digital</option>
+                            <option value="turismo">Licenciatura en Turismo</option>
+                        </select>
+                    </div>
+
+                    <div class="p-3 rounded-4 mb-4 d-flex gap-3 align-items-start" style="background: rgba(6,182,212,0.06); border: 1px solid rgba(6,182,212,0.2);">
+                        <i class="bi bi-info-circle-fill fs-4" style="color: #67e8f9;"></i>
+                        <div>
+                            <strong class="d-block mb-1" style="color: #67e8f9; font-size: 0.85rem;">Información del Reporte:</strong>
+                            <span class="text-secondary" style="font-size: 0.8rem;">
+                                Incluye estados de validación del Plan de Trabajo (D-01), Bases (F-08), Seguimiento Bimestral y Expediente Final.
+                            </span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-lg w-100 py-3 d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-download"></i>
+                        Descargar Bitácora Oficial (.xlsx)
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna Derecha: Estadísticas Rápidas -->
+    <div class="col-lg-5">
+        <div class="content-card h-100">
+            <div class="content-card-header">
+                <h3 class="d-flex align-items-center gap-2">
+                    <i class="bi bi-bar-chart-fill text-primary"></i> Estado de Cumplimiento
+                </h3>
+            </div>
+            <div class="content-card-body">
+                <div class="d-flex flex-column gap-3">
+                    
+                    <!-- 1. Expediente Inicial -->
+                    <div class="p-3 rounded-3 d-flex align-items-center justify-content-between" style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);">
+                        <div>
+                            <span class="d-block text-uppercase fw-bold" style="color: #fca5a5; font-size: 0.75rem;">1. Expediente Inicial</span>
+                            <span style="color: rgba(252,165,165,0.7); font-size: 0.8rem;">Pendientes de D-01 / F-08</span>
+                        </div>
+                        <span class="fs-4 fw-bold" style="color: #fca5a5;">{{ adeudos_inicial }}</span>
+                    </div>
+
+                    <!-- 2. Primer Bimestre -->
+                    <div class="p-3 rounded-3 d-flex align-items-center justify-content-between" style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2);">
+                        <div>
+                            <span class="d-block text-uppercase fw-bold" style="color: #fcd34d; font-size: 0.75rem;">2. Primer Bimestre</span>
+                            <span style="color: rgba(252,211,77,0.7); font-size: 0.8rem;">Reportes F-04 Vencidos</span>
+                        </div>
+                        <span class="fs-4 fw-bold" style="color: #fcd34d;">{{ adeudos_bim1 }}</span>
+                    </div>
+
+                    <!-- 3. Segundo Bimestre -->
+                    <div class="p-3 rounded-3 d-flex align-items-center justify-content-between" style="background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.15);">
+                        <div>
+                            <span class="d-block text-uppercase fw-bold" style="color: #fde68a; font-size: 0.75rem;">3. Segundo Bimestre</span>
+                            <span style="color: rgba(253,230,138,0.7); font-size: 0.8rem;">Reportes F-04 Vencidos</span>
+                        </div>
+                        <span class="fs-4 fw-bold" style="color: #fde68a;">{{ adeudos_bim2 }}</span>
+                    </div>
+                    
+                    <!-- 4. Tercer Bimestre -->
+                    <div class="p-3 rounded-3 d-flex align-items-center justify-content-between" style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2);">
+                        <div>
+                            <span class="d-block text-uppercase fw-bold" style="color: #c4b5fd; font-size: 0.75rem;">4. Tercer Bimestre</span>
+                            <span style="color: rgba(196,181,253,0.7); font-size: 0.8rem;">Reportes F-04 Vencidos</span>
+                        </div>
+                        <span class="fs-4 fw-bold" style="color: #c4b5fd;">{{ adeudos_bim3 }}</span>
+                    </div>
+                    
+                    <!-- 5. Expediente Final -->
+                    <div class="p-3 rounded-3 d-flex align-items-center justify-content-between" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);">
+                        <div>
+                            <span class="d-block text-uppercase fw-bold" style="color: #6ee7b7; font-size: 0.75rem;">5. Expediente Final</span>
+                            <span style="color: rgba(110,231,183,0.7); font-size: 0.8rem;">Pendientes de D-02</span>
+                        </div>
+                        <span class="fs-4 fw-bold" style="color: #6ee7b7;">{{ adeudos_final }}</span>
+                    </div>
+
+                    <!-- Carrera Crítica -->
+                    <div class="mt-2 p-3 rounded-4 d-flex align-items-center gap-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border);">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);">
+                            <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+                        </div>
+                        <div>
+                            <small class="text-secondary text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.05em;">Carrera con Mayor Rezago</small>
+                            <div class="d-flex align-items-baseline gap-2 mt-1">
+                                <span class="fw-bold text-primary" style="font-size: 0.95rem;">{% if peor_carrera %}{{ peor_carrera.carrera }}{% else %}Ninguna{% endif %}</span>
+                                <span class="badge" style="background: rgba(239,68,68,0.2); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3);">{% if peor_carrera %}{{ peor_carrera.faltas }} faltas{% else %}0{% endif %}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección Inferior: Notificaciones -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="content-card" style="border-left: 4px solid #7c3aed;">
+            <div class="content-card-body p-4">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-4">
+                    <div class="d-flex align-items-center gap-4">
+                        <div class="rounded-4 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; background: var(--gradient-1); flex-shrink: 0; box-shadow: 0 4px 15px rgba(124,58,237,0.4);">
+                            <i class="bi bi-megaphone-fill fs-3 text-white"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-1 fw-bold text-primary">Notificación Automática de Adeudos</h5>
+                            <p class="text-secondary mb-0 small" style="max-width: 600px;">
+                                Esta herramienta escanea el padrón y envía recordatorios institucionales a todos los alumnos 
+                                marcados con deudas vigentes. Optimiza la recuperación de documentos sin intervención manual.
+                            </p>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg px-4 d-flex align-items-center gap-2" onclick="confirmarEnvio()">
+                        <i class="bi bi-send-fill"></i>
+                        Ejecutar Notificación Masiva
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function confirmarEnvio() {
+        if (confirm("¿Estás seguro de enviar correos de recordatorio a todos los alumnos con adeudos? Esta acción no se puede deshacer.")) {
+            
+            const btn = document.querySelector('button[onclick="confirmarEnvio()"]');
+            const originalHTML = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Enviando...';
+            
+            try {
+                const response = await fetch('/admin/notificar_masivo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`✅ ¡Éxito! Se enviaron correctamente ${data.enviados} correos de recordatorio.`);
+                } else {
+                    alert(`❌ Error del Servidor: ${data.error}`);
+                }
+            } catch (error) {
+                console.error("Error en Fetch:", error);
+                alert("❌ Ocurrió un error de red al intentar enviar las notificaciones.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+    }
+</script>
+{% endblock %}

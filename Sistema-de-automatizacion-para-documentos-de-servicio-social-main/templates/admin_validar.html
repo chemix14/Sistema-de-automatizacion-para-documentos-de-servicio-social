@@ -1,0 +1,266 @@
+{% extends "admin_base.html" %}
+
+{% block extra_css %}
+<style>
+    .avatar-circle {
+        width: 38px;
+        height: 38px;
+        background: rgba(124,58,237,0.15);
+        border: 1px solid rgba(124,58,237,0.25);
+        color: #a78bfa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        z-index: 1010;
+        background: #0f1629 !important;
+        border-right: 1px solid var(--glass-border) !important;
+    }
+    thead .sticky-col {
+        z-index: 1040;
+        background: rgba(15,22,41,0.98) !important;
+    }
+    .status-select {
+        cursor: pointer;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        border: none;
+        padding: 4px 10px;
+    }
+    .status-select:hover {
+        transform: scale(1.05);
+        filter: brightness(1.1);
+    }
+    .section-header {
+        font-weight: 700;
+        font-size: 0.65rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    .table th {
+        padding: 10px 12px;
+    }
+    .table td {
+        padding: 10px 12px;
+    }
+    #filtro, #filtro_carrera, #filtro_estado {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid var(--glass-border);
+        color: var(--text-primary);
+        border-radius: 24px !important;
+    }
+    #filtro::placeholder { color: var(--text-muted); }
+    #filtro:focus, #filtro_carrera:focus, #filtro_estado:focus {
+        background: rgba(255,255,255,0.09);
+        border-color: rgba(124,58,237,0.5);
+        box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+        color: var(--text-primary);
+    }
+    #filtro_carrera option, #filtro_estado option { background: #1a1f36; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <h2>Gestión de Expedientes</h2>
+            <p>Valida y actualiza la documentación de los alumnos en tiempo real.</p>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="position-relative" style="min-width:260px;">
+                <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3" style="color:var(--text-muted);"></i>
+                <input type="text" id="filtro" class="form-control ps-5"
+                       placeholder="Buscar alumno o número de control...">
+            </div>
+
+            <select id="filtro_carrera" class="form-select" style="width:180px;">
+                <option value="">Todas las Carreras</option>
+                <option value="sistemas">Sistemas</option>
+                <option value="informatica">Informática</option>
+                <option value="industrial">Industrial</option>
+                <option value="gestion">Gestión</option>
+                <option value="mecatronica">Mecatrónica</option>
+                <option value="alimentarias">Alimentarias</option>
+                <option value="animacion">Animación</option>
+                <option value="turismo">Turismo</option>
+            </select>
+
+            <select id="filtro_estado" class="form-select" style="width:170px;">
+                <option value="">Cualquier Estado</option>
+                <option value="En Revisión">En Revisión</option>
+                <option value="Disponible">Disponibles</option>
+                <option value="Bloqueado">Bloqueados</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="content-card overflow-hidden">
+    <div class="table-responsive" style="max-height: 75vh;">
+        <table class="table table-hover align-middle mb-0" id="tablaValidacion">
+            <thead class="sticky-top">
+                <tr>
+                    <th rowspan="2" class="ps-4 py-3 sticky-col section-header" style="min-width:270px;">Estudiante / Control</th>
+                    <th colspan="6" class="text-center py-2 section-header" style="background:rgba(124,58,237,0.08);border-bottom:2px solid rgba(124,58,237,0.3);color:#a78bfa;">Expediente Inicial</th>
+                    <th colspan="2" class="text-center py-2 section-header" style="background:rgba(6,182,212,0.06);border-bottom:2px solid rgba(6,182,212,0.25);color:#67e8f9;border-left:1px solid var(--glass-border);">Bimestre 1</th>
+                    <th colspan="2" class="text-center py-2 section-header" style="background:rgba(6,182,212,0.06);border-bottom:2px solid rgba(6,182,212,0.25);color:#67e8f9;border-left:1px solid var(--glass-border);">Bimestre 2</th>
+                    <th colspan="2" class="text-center py-2 section-header" style="background:rgba(6,182,212,0.06);border-bottom:2px solid rgba(6,182,212,0.25);color:#67e8f9;border-left:1px solid var(--glass-border);">Bimestre 3</th>
+                    <th colspan="3" class="text-center py-2 section-header" style="background:rgba(16,185,129,0.08);border-bottom:2px solid rgba(16,185,129,0.3);color:#6ee7b7;border-left:1px solid var(--glass-border);">Expediente Final</th>
+                </tr>
+                <tr style="background:rgba(255,255,255,0.02);">
+                    <!-- Inicial -->
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">F-01 Sol.</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">Acuse Pr.</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">Cart Ace.</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">F-03 Com.</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">D-01 Plan</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">F-08 Bas.</th>
+                    <!-- Bim 1 -->
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);border-left:1px solid var(--glass-border);">F-04 Rep</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">F-05 Eva</th>
+                    <!-- Bim 2 -->
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);border-left:1px solid var(--glass-border);">F-04 Rep</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">F-05 Eva</th>
+                    <!-- Bim 3 -->
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);border-left:1px solid var(--glass-border);">F-04 Rep</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">F-05 Eva</th>
+                    <!-- Final -->
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);border-left:1px solid var(--glass-border);">D-02 Fin</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">Cart Ter</th>
+                    <th class="py-2 text-center section-header" style="min-width:100px;color:var(--text-muted);">Acuse Ter</th>
+                </tr>
+            </thead>
+            <tbody class="border-top-0">
+                {% for alumno in alumnos %}
+                <tr class="alumno-row" data-carrera="{{ alumno.carrera|lower|default('') }}"
+                    data-estados="{{ alumno.estado_frps01 }} {{ alumno.estado_acuse_carta_pres }} {{ alumno.estado_carta_aceptacion }} {{ alumno.estado_frps03 }} {{ alumno.estado_drps01 }} {{ alumno.estado_frps08 }} {{ alumno.estado_frps04_1 }} {{ alumno.estado_frps05_1 }} {{ alumno.estado_frps04_2 }} {{ alumno.estado_frps05_2 }} {{ alumno.estado_frps04_3 }} {{ alumno.estado_frps05_3 }} {{ alumno.estado_drps02 }} {{ alumno.estado_carta_terminacion }} {{ alumno.estado_acuse_carta_term }}">
+                    <td class="ps-4 py-3 sticky-col">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="avatar-circle">
+                                {{ alumno.nombre[:1] | upper }}
+                            </div>
+                            <div>
+                                <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">{{ alumno.nombre }}</div>
+                                <div class="d-flex align-items-center gap-2 mt-1">
+                                    <code>{{ alumno.no_control }}</code>
+                                    <span class="badge" style="background:rgba(100,116,139,0.15);color:var(--text-muted);border:1px solid rgba(100,116,139,0.2);font-size:9px;">{{ alumno.carrera }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    {{ selector_estado(alumno.no_control, 'estado_frps01', alumno.estado_frps01) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_acuse_carta_pres', alumno.estado_acuse_carta_pres) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_carta_aceptacion', alumno.estado_carta_aceptacion) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_frps03', alumno.estado_frps03) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_drps01', alumno.estado_drps01) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_frps08', alumno.estado_frps08) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_frps04_1', alumno.estado_frps04_1) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_frps05_1', alumno.estado_frps05_1) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_frps04_2', alumno.estado_frps04_2) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_frps05_2', alumno.estado_frps05_2) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_frps04_3', alumno.estado_frps04_3) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_frps05_3', alumno.estado_frps05_3) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_drps02', alumno.estado_drps02) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_carta_terminacion', alumno.estado_carta_terminacion) | safe }}
+                    {{ selector_estado(alumno.no_control, 'estado_acuse_carta_term', alumno.estado_acuse_carta_term) | safe }}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Mapa de colores nuevos para cada estado (tema oscuro glassmorphism)
+    const estadoStyles = {
+        'Bloqueado':   { bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.25)', color: '#94a3b8', selectBg: 'rgba(100,116,139,0.08)' },
+        'Disponible':  { bg: 'rgba(6,182,212,0.10)',   border: 'rgba(6,182,212,0.25)',   color: '#67e8f9', selectBg: 'rgba(6,182,212,0.06)' },
+        'En Revisión': { bg: 'rgba(245,158,11,0.10)',  border: 'rgba(245,158,11,0.25)',  color: '#fcd34d', selectBg: 'rgba(245,158,11,0.06)' },
+        'Aprobado':    { bg: 'rgba(16,185,129,0.10)',  border: 'rgba(16,185,129,0.25)',  color: '#6ee7b7', selectBg: 'rgba(16,185,129,0.06)' },
+    };
+
+    function cambiarEstado(selectElement, noControl, columna, tdId) {
+        const nuevoEstado = selectElement.value;
+        const tdElement = document.getElementById(tdId);
+        const styles = estadoStyles[nuevoEstado] || estadoStyles['Bloqueado'];
+
+        // Feedback visual de "cargando"
+        tdElement.style.opacity = '0.45';
+        tdElement.style.transform = 'scale(0.97)';
+
+        fetch('/admin/actualizar_estado', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                no_control: noControl,
+                columna: columna,
+                nuevo_estado: nuevoEstado
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Aplicar nuevos colores al TD y al select
+                tdElement.style.background = styles.bg;
+                tdElement.style.opacity = '1';
+                tdElement.style.transform = 'scale(1)';
+
+                selectElement.style.background = styles.selectBg;
+                selectElement.style.border = `1px solid ${styles.border}`;
+                selectElement.style.color = styles.color;
+
+                // Flash de confirmación
+                tdElement.style.boxShadow = `inset 0 0 0 1px ${styles.border}`;
+                setTimeout(() => tdElement.style.boxShadow = 'none', 800);
+
+                // Actualizar data-estados para filtros
+                const tr = selectElement.closest('tr');
+                tr.setAttribute('data-estados', tr.getAttribute('data-estados') + ' ' + nuevoEstado);
+            } else {
+                alert('No se pudo actualizar: ' + data.message);
+                tdElement.style.opacity = '1';
+                tdElement.style.transform = 'scale(1)';
+                window.location.reload();
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            tdElement.style.opacity = '1';
+            tdElement.style.transform = 'scale(1)';
+            alert('Error de conexión al actualizar el estado.');
+        });
+    }
+
+    function aplicarFiltros() {
+        const q = document.getElementById('filtro').value.toLowerCase();
+        const c = document.getElementById('filtro_carrera').value.toLowerCase();
+        const e = document.getElementById('filtro_estado').value;
+
+        document.querySelectorAll(".alumno-row").forEach(row => {
+            const text = row.querySelector('.sticky-col').textContent.toLowerCase();
+            const carrera = row.getAttribute('data-carrera') || '';
+            const estados = row.getAttribute('data-estados') || '';
+
+            const match = text.includes(q) && (c === "" || carrera.includes(c)) && (e === "" || estados.includes(e));
+            row.style.display = match ? '' : 'none';
+        });
+    }
+
+    document.getElementById('filtro')?.addEventListener('input', aplicarFiltros);
+    document.getElementById('filtro_carrera')?.addEventListener('change', aplicarFiltros);
+    document.getElementById('filtro_estado')?.addEventListener('change', aplicarFiltros);
+</script>
+{% endblock %}

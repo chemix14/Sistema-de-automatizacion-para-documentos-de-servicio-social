@@ -1,0 +1,17 @@
+# Archivos de entorno local (CREDENTIALS - NUNCA SUBIR)
+.env
+
+# Entornos virtuales de Python
+venv/
+env/
+.venv/
+
+# Archivos compilados y de caché
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE y sistema operativo
+.vscode/
+.idea/
+.DS_Store

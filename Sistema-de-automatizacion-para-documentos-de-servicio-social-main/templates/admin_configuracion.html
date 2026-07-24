@@ -1,0 +1,227 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Configuración del Calendario — Admin ITST{% endblock %}
+
+{% block extra_css %}
+<style>
+    .config-section-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .date-field-group {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-sm);
+        padding: 16px;
+        transition: border-color 0.2s;
+    }
+
+    .date-field-group:hover { border-color: rgba(124,58,237,0.3); }
+
+    .date-field-group label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .bimestre-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        transition: border-color 0.2s;
+    }
+
+    .bimestre-card:hover { border-color: rgba(124,58,237,0.25); }
+
+    .bimestre-number {
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .bimestre-number::before {
+        content: '';
+        width: 20px;
+        height: 2px;
+        background: var(--gradient-1);
+        border-radius: 2px;
+    }
+
+    .floating-save {
+        position: fixed;
+        bottom: 28px;
+        right: 36px;
+        z-index: 1050;
+    }
+
+    .btn-save {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--gradient-1);
+        color: white;
+        border: none;
+        border-radius: 28px;
+        padding: 13px 28px;
+        font-size: 0.925rem;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 6px 28px rgba(124,58,237,0.5);
+        transition: all 0.25s;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 36px rgba(124,58,237,0.65);
+        filter: brightness(1.08);
+    }
+
+    .btn-save:active { transform: scale(0.97); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Calendario Oficial</h2>
+    <p>Configura las fechas críticas que rigen los procesos automáticos de validación y entregas.</p>
+</div>
+
+<form action="/admin/configuracion/guardar" method="POST" class="pb-5">
+    <div class="row g-4">
+
+        <!-- Info General -->
+        <div class="col-lg-6">
+            <div class="content-card h-100">
+                <div class="content-card-header">
+                    <h3 style="display:flex;align-items:center;gap:12px;">
+                        <div class="config-section-icon" style="background:rgba(124,58,237,0.12);color:#a78bfa;">
+                            <i class="bi bi-info-circle-fill"></i>
+                        </div>
+                        Información General
+                    </h3>
+                </div>
+                <div class="content-card-body">
+                    <div class="mb-4">
+                        <label class="form-label">Periodo Escolar Oficial</label>
+                        <input type="text" class="form-control" name="periodo_oficial"
+                            placeholder="Ej: FEBRERO – JUNIO 2026"
+                            value="{{ config.periodo_oficial | default('') }}" required>
+                        <div class="form-text">
+                            <i class="fa-solid fa-circle-info me-1"></i>
+                            Este texto aparecerá automáticamente en todos los documentos generados por los alumnos.
+                        </div>
+                    </div>
+
+                    <div class="date-field-group">
+                        <label style="color:#fca5a5;">
+                            <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                            Límite — Expediente Inicial
+                        </label>
+                        <input type="date" class="form-control" name="limite_expediente_inicial"
+                            value="{{ config.limite_expediente_inicial | default('') }}">
+                        <p style="font-size:0.75rem;color:var(--text-muted);margin:8px 0 0;">
+                            Los alumnos que no entreguen antes de esta fecha aparecerán como morosos en los reportes.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Culminación -->
+        <div class="col-lg-6">
+            <div class="content-card h-100">
+                <div class="content-card-header">
+                    <h3 style="display:flex;align-items:center;gap:12px;">
+                        <div class="config-section-icon" style="background:rgba(16,185,129,0.12);color:#6ee7b7;">
+                            <i class="bi bi-flag-fill"></i>
+                        </div>
+                        Culminación del Proceso
+                    </h3>
+                </div>
+                <div class="content-card-body">
+                    <div class="date-field-group h-100" style="border-color:rgba(16,185,129,0.25);">
+                        <label style="color:#6ee7b7;">
+                            <i class="fa-solid fa-circle-check me-1"></i>
+                            Límite — Expediente Final
+                        </label>
+                        <input type="date" class="form-control" name="limite_expediente_final"
+                            value="{{ config.limite_expediente_final | default('') }}">
+                        <p style="font-size:0.75rem;color:var(--text-muted);margin:8px 0 0;">
+                            Fecha límite para la entrega de la Carta de Terminación y el Reporte Final (D-RPS-02).
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bimestres -->
+        <div class="col-12">
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h3 style="display:flex;align-items:center;gap:12px;">
+                        <div class="config-section-icon" style="background:rgba(6,182,212,0.12);color:#67e8f9;">
+                            <i class="bi bi-calendar3"></i>
+                        </div>
+                        Cronograma de Reportes Bimestrales
+                    </h3>
+                </div>
+                <div class="content-card-body">
+                    <div class="row g-4">
+                        {% for i in range(1, 4) %}
+                        <div class="col-md-4">
+                            <div class="bimestre-card">
+                                <div class="bimestre-number">{{ i }}° Bimestre</div>
+
+                                <div class="mb-3">
+                                    <label class="form-label" style="color:var(--text-secondary);">Periodo que abarca</label>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <input type="date" class="form-control" name="inicio_bimestre_{{ i }}"
+                                            value="{{ config['inicio_bimestre_' ~ i] | default('') }}">
+                                        <span style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap;">al</span>
+                                        <input type="date" class="form-control" name="fin_bimestre_{{ i }}"
+                                            value="{{ config['fin_bimestre_' ~ i] | default('') }}">
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="form-label" style="color:#fca5a5;">
+                                        <i class="fa-solid fa-clock me-1"></i>Límite de Entrega
+                                    </label>
+                                    <input type="date" class="form-control" name="limite_bimestre_{{ i }}"
+                                        value="{{ config['limite_bimestre_' ~ i] | default('') }}">
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Save Button -->
+    <div class="floating-save">
+        <button type="submit" class="btn-save">
+            <i class="bi bi-cloud-arrow-up-fill fs-5"></i>
+            Guardar Configuración
+        </button>
+    </div>
+</form>
+{% endblock %}

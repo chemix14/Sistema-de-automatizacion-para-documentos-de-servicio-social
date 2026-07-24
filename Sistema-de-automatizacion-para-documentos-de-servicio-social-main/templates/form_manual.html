@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+
+{% block title %}{{ documento.nombre_documento }} — ITST{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* === STEP CARD === */
+    .step-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: visible;
+        backdrop-filter: blur(8px);
+        transition: border-color 0.2s;
+    }
+
+    .step-card:hover { border-color: var(--glass-hover); }
+
+    .step-badge {
+        position: absolute;
+        top: -14px;
+        left: 28px;
+        background: var(--gradient-1);
+        color: white;
+        font-weight: 700;
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        padding: 5px 14px;
+        border-radius: 20px;
+        box-shadow: 0 3px 12px rgba(124,58,237,0.45);
+        text-transform: uppercase;
+    }
+
+    .step-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--text-primary);
+        margin: 0 0 8px;
+    }
+
+    .step-desc {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    /* === DOWNLOAD BUTTON === */
+    .btn-download {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+        background: rgba(16,185,129,0.12);
+        border: 1px solid rgba(16,185,129,0.3);
+        color: #6ee7b7;
+        border-radius: var(--radius-sm);
+        padding: 11px 22px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-decoration: none;
+        transition: all 0.25s;
+    }
+
+    .btn-download:hover {
+        background: rgba(16,185,129,0.2);
+        border-color: rgba(16,185,129,0.5);
+        color: #a7f3d0;
+        transform: translateY(-1px);
+    }
+
+    /* === NOTICE === */
+    .info-notice {
+        background: rgba(6,182,212,0.06);
+        border: 1px solid rgba(6,182,212,0.2);
+        border-radius: var(--radius-md);
+        padding: 16px 20px;
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 28px;
+        color: #67e8f9;
+        font-size: 0.875rem;
+        line-height: 1.6;
+    }
+
+    .info-notice .notice-icon {
+        font-size: 1.1rem;
+        margin-top: 2px;
+        flex-shrink: 0;
+        opacity: 0.9;
+    }
+
+    .info-notice strong { color: #a5f3fc; }
+
+    /* === DROPZONE === */
+    .dropzone-box {
+        border: 2px dashed rgba(124,58,237,0.3);
+        border-radius: var(--radius-md);
+        background: rgba(124,58,237,0.04);
+        padding: 48px 24px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .dropzone-box:hover {
+        border-color: rgba(124,58,237,0.6);
+        background: rgba(124,58,237,0.08);
+    }
+
+    .dropzone-box.dragover {
+        border-color: var(--accent);
+        background: rgba(124,58,237,0.12);
+        transform: scale(1.01);
+    }
+
+    .dropzone-icon {
+        font-size: 3rem;
+        color: var(--accent);
+        margin-bottom: 14px;
+        opacity: 0.75;
+    }
+
+    .dropzone-text {
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+        font-size: 1rem;
+    }
+
+    .dropzone-hint {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* === FILE SELECTED === */
+    .file-selected-box {
+        display: none;
+        align-items: center;
+        gap: 14px;
+        background: rgba(16,185,129,0.08);
+        border: 1px solid rgba(16,185,129,0.25);
+        border-radius: var(--radius-md);
+        padding: 16px 20px;
+        margin-top: 14px;
+    }
+
+    .file-selected-box .file-icon {
+        font-size: 2rem;
+        color: #6ee7b7;
+        flex-shrink: 0;
+    }
+
+    .file-wrapper { flex: 1; }
+
+    .file-name {
+        font-weight: 700;
+        color: #a7f3d0;
+        margin: 0 0 2px;
+        font-size: 0.9rem;
+    }
+
+    .file-status {
+        color: var(--text-muted);
+        font-size: 0.78rem;
+    }
+
+    .btn-remove-file {
+        background: rgba(239,68,68,0.1);
+        border: 1px solid rgba(239,68,68,0.25);
+        color: #fca5a5;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-remove-file:hover {
+        background: rgba(239,68,68,0.2);
+        color: white;
+    }
+
+    /* === SUBMIT BTN === */
+    .btn-send {
+        background: var(--gradient-2);
+        color: white;
+        border: none;
+        border-radius: 24px;
+        padding: 12px 32px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.25s;
+        box-shadow: 0 2px 14px rgba(16,185,129,0.35);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .btn-send:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 28px rgba(16,185,129,0.5);
+        filter: brightness(1.08);
+    }
+
+    .btn-send:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex align-items-start gap-4 mb-4">
+    <div style="width:54px;height:54px;border-radius:16px;background:linear-gradient(135deg,#10b981,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:white;box-shadow:0 4px 20px rgba(16,185,129,0.4);flex-shrink:0;">
+        <i class="fa-solid fa-file-signature"></i>
+    </div>
+    <div>
+        <h1 style="font-size:1.4rem;font-weight:700;letter-spacing:-0.02em;margin:0 0 4px;color:var(--text-primary);">{{ documento.nombre_documento }}</h1>
+        <p style="margin:0;color:var(--text-secondary);font-size:0.875rem;">Carga manual de documento con firma — Sigue los dos pasos indicados</p>
+    </div>
+</div>
+
+<!-- Aviso -->
+<div class="info-notice">
+    <i class="fa-solid fa-circle-info notice-icon"></i>
+    <div>
+        <strong>¿Cómo funciona este formulario?</strong><br>
+        Este documento requiere llenado manual. Primero descarga la plantilla oficial, complétala en tu equipo (Word/Excel o a mano según indique), guárdala y finalmente súbela en el Paso 2 para enviarla a revisión.
+    </div>
+</div>
+
+<!-- Paso 1 -->
+<div class="step-card">
+    <span class="step-badge"><i class="fa-solid fa-1 me-1"></i>Paso 1</span>
+    <h5 class="step-title">Descargar Plantilla Oficial</h5>
+    <p class="step-desc">
+        Descarga el documento oficial de <strong style="color:var(--text-primary);">{{ documento.nombre_documento }}</strong> a tu equipo.
+        Ábrelo con Word o Excel, llena todos los campos requeridos y guárdalo con tu firma en caso de ser necesario.
+    </p>
+    <a href="{{ url_for('descargar_plantilla_generica', clave=documento.clave_formato) }}" class="btn-download">
+        <i class="fa-solid fa-download"></i>
+        Descargar {{ documento.clave_formato }}
+    </a>
+</div>
+
+<!-- Paso 2 -->
+<div class="step-card">
+    <span class="step-badge"><i class="fa-solid fa-2 me-1"></i>Paso 2</span>
+    <h5 class="step-title">Subir tu Documento Finalizado</h5>
+    <p class="step-desc">
+        Con el documento completo, firmado y listo, súbelo aquí. Se enviará automáticamente para revisión y validación por parte del Departamento de Servicio Social.
+    </p>
+
+    <form id="uploadForm" enctype="multipart/form-data" style="margin-top:20px;">
+        <div id="dropArea" class="dropzone-box" onclick="document.getElementById('fileInput').click()">
+            <i class="fa-solid fa-cloud-arrow-up dropzone-icon"></i>
+            <p class="dropzone-text">Arrastra tu documento aquí, o haz clic para seleccionarlo</p>
+            <p class="dropzone-hint">Formatos aceptados: PDF, DOCX, XLSX — Máximo 10 MB</p>
+            <input type="file" id="fileInput" name="archivo" accept=".pdf,.doc,.docx,.xls,.xlsx" class="d-none" onchange="handleFileSelect(this)">
+        </div>
+
+        <div class="file-selected-box" id="fileSelectedBox">
+            <i class="fa-solid fa-file-circle-check file-icon"></i>
+            <div class="file-wrapper">
+                <p class="file-name" id="fileNameDisplay">documento.pdf</p>
+                <span class="file-status"><i class="fa-solid fa-circle-check me-1" style="color:#6ee7b7;"></i>Listo para enviar a revisión</span>
+            </div>
+            <button type="button" class="btn-remove-file" onclick="removeFile()">
+                <i class="fa-solid fa-xmark me-1"></i>Quitar
+            </button>
+        </div>
+
+        <div class="text-end mt-4">
+            <button type="submit" class="btn-send" id="btnSubmit" disabled>
+                <i class="fa-regular fa-paper-plane"></i>
+                Enviar a Revisión
+            </button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const dropArea = document.getElementById('dropArea');
+    const fileSelectedBox = document.getElementById('fileSelectedBox');
+    const fileNameDisplay = document.getElementById('fileNameDisplay');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const formUrl = "{{ url_for('upload_manual_generica', clave=documento.clave_formato) }}";
+
+    dropArea.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropArea.classList.add('dragover');
+    });
+
+    dropArea.addEventListener('dragleave', e => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+    });
+
+    dropArea.addEventListener('drop', e => {
+        e.preventDefault();
+        dropArea.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFileSelect(fileInput);
+        }
+    });
+
+    function handleFileSelect(input) {
+        if (input.files && input.files.length > 0) {
+            fileNameDisplay.textContent = input.files[0].name;
+            dropArea.style.display = 'none';
+            fileSelectedBox.style.display = 'flex';
+            btnSubmit.disabled = false;
+        }
+    }
+
+    function removeFile() {
+        fileInput.value = '';
+        dropArea.style.display = 'block';
+        fileSelectedBox.style.display = 'none';
+        btnSubmit.disabled = true;
+    }
+
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        if (!fileInput.files.length) return;
+
+        const originalHTML = btnSubmit.innerHTML;
+        btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm"></span>&nbsp; Enviando...';
+        btnSubmit.disabled = true;
+
+        const formData = new FormData();
+        formData.append('archivo', fileInput.files[0]);
+
+        try {
+            const response = await fetch(formUrl, { method: 'POST', body: formData });
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i>&nbsp; ¡Enviado exitosamente!';
+                btnSubmit.style.background = 'linear-gradient(135deg,#10b981,#06b6d4)';
+
+                Swal.fire({
+                    title: 'Documento enviado',
+                    html: `<p style="color:var(--text-secondary)">Tu documento fue recibido correctamente y está en cola de revisión. Puedes seguir su estado en tu panel principal.</p>`,
+                    icon: 'success',
+                    confirmButtonText: 'Volver al inicio',
+                    confirmButtonColor: '#7c3aed',
+                    customClass: { popup: 'swal-glass' }
+                }).then(() => { window.location.href = "/"; });
+
+            } else {
+                throw new Error(result.error || 'Error al subir el archivo');
+            }
+        } catch (error) {
+            Swal.fire({
+                title: 'Error al enviar',
+                html: `<p style="color:var(--text-secondary)">${error.message}</p>`,
+                icon: 'error',
+                confirmButtonText: 'Intentar de nuevo',
+                confirmButtonColor: '#ef4444',
+                customClass: { popup: 'swal-glass' }
+            });
+            btnSubmit.innerHTML = originalHTML;
+            btnSubmit.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

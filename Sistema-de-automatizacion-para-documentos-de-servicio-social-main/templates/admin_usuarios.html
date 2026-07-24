@@ -1,0 +1,120 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2>Gestión de Administradores</h2>
+            <p>Control de acceso al sistema de servicio social.</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAdmin">
+            <i class="fa-solid fa-user-plus me-2"></i> Nuevo Administrador
+        </button>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="content-card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4 py-3 border-0">ID</th>
+                        <th class="py-3 border-0">Nombre</th>
+                        <th class="py-3 border-0">Correo Institucional</th>
+                        <th class="py-3 border-0">Rol</th>
+                        <th class="py-3 border-0">Estado</th>
+                        <th class="pe-4 py-3 border-0 text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in usuarios %}
+                    <tr>
+                        <td class="ps-4 py-3">#{{ u.id }}</td>
+                        <td class="py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                     style="width: 32px; height: 32px; background: var(--gradient-1); color: white; font-weight: 600; font-size: 0.8rem;">
+                                    {{ u.nombre[0]|upper }}
+                                </div>
+                                <span style="font-weight: 500; color: var(--text-primary);">{{ u.nombre }}</span>
+                            </div>
+                        </td>
+                        <td class="py-3" style="color: var(--text-secondary);">{{ u.correo }}</td>
+                        <td class="py-3">
+                            <span class="badge rounded-pill px-3 py-2" 
+                                  style="font-weight: 600; background: rgba(255,255,255,0.08); color: var(--text-secondary);">
+                                {{ u.rol }}
+                            </span>
+                        </td>
+                        <td class="py-3">
+                            {% if u.activo %}
+                            <span class="d-inline-flex align-items-center small" style="color: var(--accent-3);">
+                                <i class="fa-solid fa-circle-check me-1"></i> Activo
+                            </span>
+                            {% else %}
+                            <span class="d-inline-flex align-items-center small" style="color: var(--text-muted);">
+                                <i class="fa-solid fa-circle-xmark me-1"></i> Inactivo
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-4 py-3 text-end">
+                            {% if u.id != 1 %}
+                            <a href="/admin/usuarios/eliminar/{{ u.id }}" class="btn btn-outline-danger btn-sm rounded-pill px-3" 
+                               onclick="return confirm('¿Estás seguro de eliminar a este administrador?')">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </a>
+                            {% else %}
+                            <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-muted); padding: 8px 10px;" title="Cuenta maestra protegida">
+                                <i class="fa-solid fa-shield-halved"></i>
+                            </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar Admin -->
+<div class="modal fade" id="modalAdmin" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title font-sans">Registrar Nuevo Administrador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/admin/usuarios/guardar" method="POST">
+                <div class="modal-body py-4">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre Completo</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej. Juan Pérez" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Correo Institucional</label>
+                        <input type="email" name="correo" class="form-control" placeholder="usuario@teziutlan.tecnm.mx" required>
+                        <div class="form-text">El usuario podrá entrar vía Microsoft.</div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label">Rol del Usuario</label>
+                        <select name="rol" class="form-select">
+                            <option value="Administrador">Administrador Estándar</option>
+                            <option value="Auxiliar">Auxiliar de Oficina</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .font-sans { font-family: 'Google Sans', 'Inter', sans-serif; }
+</style>
+{% endblock %}

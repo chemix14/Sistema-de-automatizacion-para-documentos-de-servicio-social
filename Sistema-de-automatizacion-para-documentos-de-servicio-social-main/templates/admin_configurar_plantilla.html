@@ -1,0 +1,373 @@
+{% extends "admin_base.html" %}
+
+{% block content %}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+        <div id="toast-feedback" class="toast align-items-center border-0 rounded-4" role="alert">
+            <div class="d-flex">
+                <div class="toast-body fw-medium" id="toast-msg"></div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h4 class="fw-bold text-primary mb-1">Configuración de Plantilla: {{ documento.nombre_documento }}</h4>
+                            <p class="text-muted mb-0">Define los campos del formulario y su ubicación en el Excel.</p>
+                        </div>
+                        <a href="{{ url_for('admin_plantillas') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left me-1"></i> Volver
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Formulario para agregar campo -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm border-0 rounded-3 h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">Agregar Nuevo Campo</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form id="formNuevoCampo">
+                        <input type="hidden" name="id_documento" value="{{ documento.id_documento }}">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Etiqueta Web</label>
+                            <input type="text" name="label_web" class="form-control" placeholder="Ej: Nombre del Alumno"
+                                required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Nombre Variable (BD/Internal)</label>
+                            <input type="text" name="nombre_variable" class="form-control" placeholder="Ej: nombre_alu"
+                                required>
+                            <div class="form-text">Debe coincidir con la BD para autollenado.</div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Tipo Input</label>
+                                <select name="tipo_input" class="form-select" required>
+                                    <option value="text">Texto</option>
+                                    <option value="date">Fecha</option>
+                                    <option value="number">Número</option>
+                                    <option value="select">Selección</option>
+                                    <option value="textarea">Área de Texto</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Celda Excel</label>
+                                <input type="text" name="celda_excel" class="form-control" placeholder="Ej: C12"
+                                    required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Tabla de Origen</label>
+                                <select name="tabla_origen" id="tabla_origen" class="form-select">
+                                    <option value="Manual">Ninguna (Manual)</option>
+                                    <option value="alumnos">Alumnos</option>
+                                    <option value="proyectos_servicio">Proyectos</option>
+                                    <option value="dependencias">Dependencias</option>
+                                    <option value="actividades_proyecto">Actividades del Proyecto</option>
+                                    <option value="configuracion_sistema">Configuración del Sistema</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium">Columna de Origen</label>
+                                <select name="columna_origen" id="columna_origen" class="form-select" disabled>
+                                    <option value="">Selecciona Tabla primero</option>
+                                </select>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <div class="form-text">Si se vincula, el campo se llenará automáticamente.</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-medium">Orden de Aparición</label>
+                            <input type="number" name="orden" class="form-control" value="0">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2" id="btnGuardarCampo">
+                            <i class="bi bi-plus-circle me-1"></i> Guardar Campo
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de campos configurados -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow-sm border-0 rounded-3 h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h5 class="fw-bold mb-0">Campos Configurados</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="tablaCampos">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4 border-0" style="font-size: 0.85rem; color: #6c757d;">ORDEN</th>
+                                    <th class="border-0" style="font-size: 0.85rem; color: #6c757d;">ETIQUETA</th>
+                                    <th class="border-0" style="font-size: 0.85rem; color: #6c757d;">VARIABLE</th>
+                                    <th class="border-0" style="font-size: 0.85rem; color: #6c757d;">ORIGEN
+                                        (Tabla.Columna)</th>
+                                    <th class="border-0" style="font-size: 0.85rem; color: #6c757d;">TIPO</th>
+                                    <th class="border-0" style="font-size: 0.85rem; color: #6c757d;">CELDA</th>
+                                    <th class="pe-4 border-0 text-end" style="font-size: 0.85rem; color: #6c757d;">
+                                        ACCIONES</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for campo in campos %}
+                                <tr>
+                                    <td class="ps-4 fw-medium">{{ campo.orden }}</td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ campo.label_web }}</div>
+                                    </td>
+                                    <td><code>{{ campo.nombre_variable }}</code></td>
+                                    <td>
+                                        {% if campo.tabla_origen %}
+                                        <span class="badge bg-info text-white">
+                                            {{ campo.tabla_origen }}.{{ campo.columna_origen }}
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-secondary text-white">Manual</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">{{ campo.tipo_input }}</span>
+                                    </td>
+                                    <td class="fw-bold text-primary">{{ campo.celda_excel }}</td>
+                                    <td class="pe-4 text-end">
+                                        <a href="#" class="btn btn-link text-danger p-0"
+                                            onclick="eliminarCampoAsync(event, '{{ campo.id_campo }}', this)">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr class="empty-row">
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="text-muted">No hay campos configurados para esta plantilla.</div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+</div>
+
+<style>
+    :root {
+        --primary-color: #1b396a;
+    }
+
+    .text-primary {
+        color: var(--primary-color) !important;
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+        background-color: #142a4e;
+        border-color: #142a4e;
+    }
+
+    .card {
+        transition: transform 0.2s ease;
+    }
+
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(27, 57, 106, 0.1);
+    }
+</style>
+
+<script>
+    // Toast setup
+    const bsToast = new bootstrap.Toast(document.getElementById('toast-feedback'), { delay: 3000 });
+    function showToast(msg, ok) {
+        const t = document.getElementById('toast-feedback');
+        const m = document.getElementById('toast-msg');
+        t.classList.remove('bg-success', 'bg-danger', 'text-white');
+        t.classList.add(ok ? 'bg-success' : 'bg-danger', 'text-white');
+        m.textContent = msg;
+        bsToast.show();
+    }
+
+    function slugify(text) {
+        return text.toString().toLowerCase().trim()
+            .replace(/\s+/g, '_').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '_')
+            .replace(/^-+/, '').replace(/-+$/, '');
+    }
+
+    // Auto-slugify variable name
+    document.querySelector('[name="label_web"]').addEventListener('input', function(e) {
+        const varInput = document.querySelector('[name="nombre_variable"]');
+        if (!varInput.value || varInput.getAttribute('data-auto') === 'true') {
+            varInput.value = slugify(e.target.value);
+            varInput.setAttribute('data-auto', 'true');
+        }
+    });
+    document.querySelector('[name="nombre_variable"]').addEventListener('input', function() {
+        this.setAttribute('data-auto', 'false');
+    });
+
+    // Async form submission
+    document.getElementById('formNuevoCampo').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = this;
+        const btn = document.getElementById('btnGuardarCampo');
+        const oldHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+
+        const formData = new FormData(form);
+        const payload = {};
+        formData.forEach((value, key) => { payload[key] = value; });
+        // Normalize for the API
+        payload.id_documento = parseInt(payload.id_documento);
+        payload.orden = parseInt(payload.orden || 0);
+        if (payload.tabla_origen === 'Manual') {
+            payload.tabla_origen = null;
+            payload.columna_origen = null;
+        }
+
+        fetch('/admin/api/guardar_campo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = oldHtml;
+            if (data.ok) {
+                showToast('Campo guardado correctamente ✅', true);
+
+                // Insert new row into the table
+                const tbody = document.querySelector('#tablaCampos tbody');
+                const emptyRow = tbody.querySelector('.empty-row');
+                if (emptyRow) emptyRow.remove();
+
+                const originText = (payload.tabla_origen && payload.tabla_origen !== 'Manual')
+                    ? `<span class="badge bg-info text-white">${payload.tabla_origen}.${payload.columna_origen}</span>`
+                    : `<span class="badge bg-secondary text-white">Manual</span>`;
+
+                const row = document.createElement('tr');
+                row.id = `campo-row-${data.id_campo}`;
+                row.innerHTML = `
+                    <td class="ps-4 fw-medium">${payload.orden}</td>
+                    <td><div class="fw-bold text-dark">${payload.label_web}</div></td>
+                    <td><code>${payload.nombre_variable}</code></td>
+                    <td>${originText}</td>
+                    <td><span class="badge bg-light text-dark border">${payload.tipo_input}</span></td>
+                    <td class="fw-bold text-primary">${payload.celda_excel || ''}</td>
+                    <td class="pe-4 text-end">
+                        <a href="#" class="btn btn-link text-danger p-0" onclick="eliminarCampoAsync(event, ${data.id_campo}, this)">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                `;
+                tbody.appendChild(row);
+
+                // Highlight
+                row.style.transition = 'background-color 0.5s ease';
+                row.style.backgroundColor = 'rgba(27, 57, 106, 0.08)';
+                setTimeout(() => { row.style.backgroundColor = ''; }, 2000);
+
+                // Reset form
+                form.reset();
+                document.getElementById('columna_origen').innerHTML = '<option value="">Manual (Sin vínculo)</option>';
+                document.getElementById('columna_origen').disabled = true;
+                // Keep the hidden id_documento field
+                form.querySelector('[name="id_documento"]').value = '{{ documento.id_documento }}';
+            } else {
+                showToast('Error: ' + (data.error || 'desconocido'), false);
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = oldHtml;
+            showToast('Error de red: ' + err.message, false);
+        });
+    });
+
+    // Async delete
+    function eliminarCampoAsync(event, idCampo, el) {
+        event.preventDefault();
+        if (!confirm('¿Eliminar este campo?')) return;
+
+        fetch('/admin/api/eliminar_campo/' + idCampo, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    showToast('Campo eliminado ✅', true);
+                    const row = el.closest('tr');
+                    if (row) row.remove();
+                } else {
+                    showToast('Error: ' + (data.error || 'desconocido'), false);
+                }
+            })
+            .catch(err => showToast('Error de red', false));
+    }
+
+    // Dynamic column loader
+    document.getElementById('tabla_origen').addEventListener('change', function () {
+        const tabla = this.value;
+        const selectorCol = document.getElementById('columna_origen');
+
+        if (tabla === 'Manual') {
+            selectorCol.innerHTML = '<option value="">Manual (Sin vínculo)</option>';
+            selectorCol.disabled = true;
+            return;
+        }
+
+        selectorCol.disabled = false;
+        selectorCol.innerHTML = '<option value="">Cargando columnas...</option>';
+
+        fetch(`/admin/api/columnas/${tabla}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    selectorCol.innerHTML = `<option value="">Error: ${data.error}</option>`;
+                    return;
+                }
+
+                let html = '<option value="">-- Selecciona Columna --</option>';
+                data.columnas.forEach(col => {
+                    html += `<option value="${col}">${col}</option>`;
+                });
+                selectorCol.innerHTML = html;
+            })
+            .catch(error => {
+                selectorCol.innerHTML = `<option value="">Error de red</option>`;
+                console.error('Error fetching columns:', error);
+            });
+    });
+</script>
+{% endblock %}

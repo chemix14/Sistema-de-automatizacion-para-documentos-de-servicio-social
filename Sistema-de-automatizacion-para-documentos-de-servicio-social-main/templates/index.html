@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio — Servicios Estudiantiles ITST{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* === WELCOME CARD === */
+    .welcome-hero {
+        background: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(6,182,212,0.1) 100%);
+        border: 1px solid rgba(124,58,237,0.25);
+        border-radius: var(--radius-lg);
+        padding: 28px 32px;
+        margin-bottom: 40px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .welcome-hero::before {
+        content: '';
+        position: absolute;
+        right: -20px;
+        top: -40px;
+        width: 220px;
+        height: 220px;
+        background: radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    .welcome-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 18px;
+        background: var(--gradient-1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        color: white;
+        box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+        flex-shrink: 0;
+    }
+
+    .welcome-text h2 {
+        margin: 0 0 6px;
+        font-size: 1.4rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
+    .welcome-text p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+
+    .user-greeting {
+        background: var(--gradient-1);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* === FASE HEADERS === */
+    .fase-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin: 40px 0 20px;
+    }
+
+    .fase-header:first-of-type { margin-top: 8px; }
+
+    .fase-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .fase-icon.purple { background: rgba(124,58,237,0.15); color: #a78bfa; }
+    .fase-icon.cyan   { background: rgba(6,182,212,0.15);  color: #67e8f9; }
+    .fase-icon.emerald{ background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .fase-icon.amber  { background: rgba(245,158,11,0.15); color: #fcd34d; }
+
+    .fase-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.01em;
+        margin: 0;
+    }
+
+    .fase-divider {
+        flex: 1;
+        height: 1px;
+        background: var(--glass-border);
+    }
+
+    /* === DOC CARDS === */
+    .doc-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-md);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        text-decoration: none;
+        position: relative;
+        transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+        cursor: pointer;
+        overflow: hidden;
+        backdrop-filter: blur(8px);
+    }
+
+    .doc-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        opacity: 0;
+        transition: opacity 0.3s;
+        background: linear-gradient(135deg, rgba(124,58,237,0.08) 0%, rgba(6,182,212,0.06) 100%);
+    }
+
+    .doc-card:not(.card-locked):hover {
+        transform: translateY(-4px);
+        border-color: rgba(124,58,237,0.4);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(124,58,237,0.15);
+    }
+
+    .doc-card:not(.card-locked):hover::before { opacity: 1; }
+
+    .card-locked {
+        opacity: 0.45;
+        cursor: not-allowed;
+        filter: grayscale(0.6);
+    }
+
+    .doc-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        margin-bottom: 14px;
+        flex-shrink: 0;
+    }
+
+    .icon-purple  { background: rgba(124,58,237,0.15); color: #a78bfa; }
+    .icon-cyan    { background: rgba(6,182,212,0.15);  color: #67e8f9; }
+    .icon-emerald { background: rgba(16,185,129,0.15); color: #6ee7b7; }
+    .icon-amber   { background: rgba(245,158,11,0.15); color: #fcd34d; }
+    .icon-rose    { background: rgba(244,63,94,0.15);  color: #fda4af; }
+    .icon-slate   { background: rgba(100,116,139,0.15);color: #94a3b8; }
+
+    .doc-title {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 6px;
+        letter-spacing: -0.01em;
+        line-height: 1.3;
+    }
+
+    .doc-text {
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        line-height: 1.5;
+        margin: 0;
+        flex: 1;
+    }
+
+    /* === STATUS BADGES === */
+    .status-badge {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 20px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .status-approved {
+        background: rgba(16,185,129,0.15);
+        color: #6ee7b7;
+        border: 1px solid rgba(16,185,129,0.3);
+    }
+
+    .status-pending {
+        background: rgba(245,158,11,0.15);
+        color: #fcd34d;
+        border: 1px solid rgba(245,158,11,0.3);
+    }
+
+    .status-date {
+        background: rgba(100,116,139,0.15);
+        color: #94a3b8;
+        border: 1px solid rgba(100,116,139,0.2);
+    }
+
+    /* === CARET for clickable cards === */
+    .doc-card:not(.card-locked)::after {
+        content: '\f054';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        bottom: 16px;
+        right: 16px;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        opacity: 0;
+        transition: opacity 0.2s, right 0.2s;
+    }
+
+    .doc-card:not(.card-locked):hover::after {
+        opacity: 1;
+        right: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Welcome Hero -->
+<div class="welcome-hero">
+    <div class="welcome-icon">
+        <i class="fa-solid fa-id-card"></i>
+    </div>
+    <div class="welcome-text">
+        {% if session.get('user_name') %}
+        <h2>Hola, <span class="user-greeting">{{ session.get('user_name').split()[0] }}</span> 👋</h2>
+        <p>Bienvenido(a) a tu portal de Servicio Social. Aquí puedes revisar y gestionar todos tus documentos. Los documentos se desbloquean conforme son validados por el administrador.</p>
+        {% else %}
+        <h2>Portal de Servicio Social</h2>
+        <p>Accede con tu número de control para gestionar tu expediente digital.</p>
+        {% endif %}
+    </div>
+</div>
+
+{% macro crear_tarjeta_doc(clave, titulo, descripcion, icono, color_clase, custom_url=none) %}
+    {% set info = expediente.get(clave, {'estado': 'Bloqueado', 'id': 0, 'tiene_config': false}) %}
+
+    {% if info.tiene_config %}
+        {% set url = url_for('formulario_por_clave', clave=clave|upper) %}
+    {% elif custom_url %}
+        {% set url = custom_url %}
+    {% else %}
+        {% set url = '#' %}
+    {% endif %}
+
+    <div class="col-md-6 col-lg-4 col-xl-3">
+        {% if info.estado in ['Bloqueado', 'Bloqueado por Fecha'] %}
+        <div class="doc-card card-locked" title="{{ 'Fecha no disponible aún' if info.estado == 'Bloqueado por Fecha' else 'Pendiente de habilitación por el administrador' }}">
+            <div class="doc-icon icon-slate"><i class="fa-solid fa-lock"></i></div>
+        {% else %}
+        <a href="{{ url }}" class="doc-card">
+        {% endif %}
+
+            {% if info.estado == 'Aprobado' %}
+            <span class="status-badge status-approved"><i class="fa-solid fa-circle-check me-1"></i>Aprobado</span>
+            {% elif info.estado == 'En Revisión' %}
+            <span class="status-badge status-pending"><i class="fa-solid fa-clock me-1"></i>En revisión</span>
+            {% elif info.estado == 'Bloqueado por Fecha' %}
+            <span class="status-badge status-date"><i class="fa-solid fa-calendar-xmark me-1"></i>Próximamente</span>
+            {% endif %}
+
+            <div class="doc-icon {{ color_clase }}"><i class="{{ icono }}"></i></div>
+            <div class="doc-title">{{ titulo }}</div>
+            <p class="doc-text">{{ descripcion }}</p>
+
+        {% if info.estado in ['Bloqueado', 'Bloqueado por Fecha'] %}
+        </div>
+        {% else %}
+        </a>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+<!-- Expediente Inicial -->
+<div class="fase-header">
+    <div class="fase-icon purple"><i class="fa-solid fa-folder-open"></i></div>
+    <h4 class="fase-title">Expediente Inicial</h4>
+    <div class="fase-divider"></div>
+</div>
+<div class="row g-3 mb-2">
+    {{ crear_tarjeta_doc('frps01', 'F-RPS-01 Solicitud de Servicio', 'Formato inicial para registrar tu solicitud de Servicio Social.', 'fa-regular fa-file-lines', 'icon-purple', custom_url=url_for('formulario_por_clave', clave='FRPS01') ) }}
+    {{ crear_tarjeta_doc('carta_pres', 'Acuse Carta de Presentación', 'Acuse de recepción de tu carta de presentación institucional.', 'fa-solid fa-file-signature', 'icon-slate') }}
+    {{ crear_tarjeta_doc('carta_acept', 'Carta de Aceptación', 'Documento oficial de aceptación emitido por la institución receptora.', 'fa-solid fa-file-circle-check', 'icon-emerald') }}
+    {{ crear_tarjeta_doc('frps03', 'F-RPS-03 Carta Compromiso', 'Carta de compromiso con las obligaciones del Servicio Social.', 'fa-solid fa-handshake', 'icon-emerald') }}
+    {{ crear_tarjeta_doc('drps01', 'D-RPS-01 Plan de Trabajo', 'Plan de actividades a desarrollar durante el Servicio Social.', 'fa-solid fa-clipboard-list', 'icon-amber', custom_url=url_for('formulario_por_clave', clave='DRPS01') ) }}
+    {{ crear_tarjeta_doc('frps08', 'F-RPS-08 Bases de Concertación', 'Bases y acuerdos individuales de concertación con la institución.', 'fa-solid fa-building-user', 'icon-rose', custom_url=url_for('formulario_por_clave', clave='FRPS08') ) }}
+</div>
+
+<!-- 1er Bimestre -->
+<div class="fase-header">
+    <div class="fase-icon cyan"><i class="fa-solid fa-calendar-days"></i></div>
+    <h4 class="fase-title">Primer Bimestre</h4>
+    <div class="fase-divider"></div>
+</div>
+<div class="row g-3 mb-2">
+    {{ crear_tarjeta_doc('frps04_1', 'F-RPS-04 Reporte Bimestral', 'Reporte de actividades realizadas durante el primer bimestre.', 'fa-solid fa-chart-line', 'icon-cyan', custom_url=url_for('formulario_por_clave', clave='FRPS04_1') ) }}
+    {{ crear_tarjeta_doc('frps05_1', 'F-RPS-05 Autoevaluación', 'Autoevaluación cualitativa del desempeño en el primer bimestre.', 'fa-solid fa-star-half-stroke', 'icon-amber', custom_url=url_for('formulario_por_clave', clave='FRPS05_1') ) }}
+</div>
+
+<!-- 2do Bimestre -->
+<div class="fase-header">
+    <div class="fase-icon cyan"><i class="fa-solid fa-calendar-days"></i></div>
+    <h4 class="fase-title">Segundo Bimestre</h4>
+    <div class="fase-divider"></div>
+</div>
+<div class="row g-3 mb-2">
+    {{ crear_tarjeta_doc('frps04_2', 'F-RPS-04 Reporte Bimestral', 'Reporte de actividades realizadas durante el segundo bimestre.', 'fa-solid fa-chart-line', 'icon-cyan', custom_url=url_for('formulario_por_clave', clave='FRPS04_2') ) }}
+    {{ crear_tarjeta_doc('frps05_2', 'F-RPS-05 Autoevaluación', 'Autoevaluación cualitativa del desempeño en el segundo bimestre.', 'fa-solid fa-star-half-stroke', 'icon-amber', custom_url=url_for('formulario_por_clave', clave='FRPS05_2') ) }}
+</div>
+
+<!-- 3er Bimestre -->
+<div class="fase-header">
+    <div class="fase-icon cyan"><i class="fa-solid fa-calendar-days"></i></div>
+    <h4 class="fase-title">Tercer Bimestre</h4>
+    <div class="fase-divider"></div>
+</div>
+<div class="row g-3 mb-2">
+    {{ crear_tarjeta_doc('frps04_3', 'F-RPS-04 Reporte Bimestral', 'Reporte de actividades realizadas durante el tercer bimestre.', 'fa-solid fa-chart-line', 'icon-cyan', custom_url=url_for('formulario_por_clave', clave='FRPS04_3') ) }}
+    {{ crear_tarjeta_doc('frps05_3', 'F-RPS-05 Autoevaluación', 'Autoevaluación cualitativa del desempeño en el tercer bimestre.', 'fa-solid fa-star-half-stroke', 'icon-amber', custom_url=url_for('formulario_por_clave', clave='FRPS05_3') ) }}
+</div>
+
+<!-- Expediente Final -->
+<div class="fase-header">
+    <div class="fase-icon emerald"><i class="fa-solid fa-flag-checkered"></i></div>
+    <h4 class="fase-title">Expediente Final</h4>
+    <div class="fase-divider"></div>
+</div>
+<div class="row g-3 mb-5">
+    {{ crear_tarjeta_doc('drps02', 'D-RPS-02 Reporte Final', 'Reporte integral de todas las actividades desarrolladas en el Servicio Social.', 'fa-solid fa-file-contract', 'icon-rose') }}
+    {{ crear_tarjeta_doc('carta_term', 'Carta de Terminación', 'Documento oficial que acredita la culminación del Servicio Social.', 'fa-solid fa-file-circle-check', 'icon-emerald') }}
+    {{ crear_tarjeta_doc('acuse_carta_term', 'Acuse de Terminación', 'Acuse final que certifica la liberación del Servicio Social.', 'fa-solid fa-file-signature', 'icon-slate') }}
+</div>
+
+{% endblock %}
