@@ -46,15 +46,26 @@ export default function AdminLayout() {
       {/* Sidebar */}
       <aside style={{ 
         width: '270px', 
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
         backgroundColor: '#061e16', 
         color: 'white', 
         display: 'flex', 
         flexDirection: 'column',
         borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-        zIndex: 20
+        zIndex: 20,
+        flexShrink: 0
       }}>
         {/* Brand Header */}
-        <div style={{ padding: '1.5rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        <div style={{ 
+          padding: '1.5rem 1.25rem', 
+          borderBottom: '1px solid rgba(255,255,255,0.08)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.85rem',
+          flexShrink: 0 
+        }}>
           <div style={{ 
             width: '40px', 
             height: '40px', 
@@ -79,7 +90,17 @@ export default function AdminLayout() {
         </div>
 
         {/* Navigation Items */}
-        <nav style={{ flex: 1, padding: '1.25rem 0.85rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', overflowY: 'auto' }}>
+        <nav style={{ 
+          flex: 1, 
+          padding: '1.25rem 0.85rem', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '0.3rem', 
+          overflowY: 'auto',
+          minHeight: 0,
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(16, 185, 129, 0.3) transparent'
+        }}>
           <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#6ee7b7', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '0 0.75rem', marginBottom: '0.5rem', opacity: 0.8 }}>
             Navegación Principal
           </div>
@@ -118,7 +139,12 @@ export default function AdminLayout() {
         </nav>
 
         {/* User Card & Logout */}
-        <div style={{ padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+        <div style={{ 
+          padding: '1rem', 
+          borderTop: '1px solid rgba(255,255,255,0.08)', 
+          backgroundColor: 'rgba(0,0,0,0.2)',
+          flexShrink: 0 
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem', padding: '0.5rem', borderRadius: '8px', backgroundColor: 'rgba(255,255,255,0.03)' }}>
             <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', color: 'white' }}>
               JM
