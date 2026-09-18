@@ -12,7 +12,8 @@ import {
   UserCheck, 
   Inbox,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  HardDrive
 } from 'lucide-react';
 import RaccoonIcon from '../components/RaccoonIcon';
 
@@ -33,6 +34,7 @@ export default function AdminLayout() {
     { to: '/admin/validacion', label: 'Validar Expedientes', icon: CheckSquare },
     { to: '/admin/formularios', label: 'Creador de Formatos', icon: FileSpreadsheet },
     { to: '/admin/reportes', label: 'Bitácora y Reportes', icon: FileSpreadsheet },
+    { to: '/admin/mantenimiento', label: 'Depurar Archivos', icon: HardDrive },
     { to: '/admin/avisos', label: 'Avisos a Alumnos', icon: Bell },
     { to: '/admin/configuracion', label: 'Calendario Oficial', icon: Calendar },
     { to: '/admin/catalogos', label: 'Catálogos Carreras', icon: Library },

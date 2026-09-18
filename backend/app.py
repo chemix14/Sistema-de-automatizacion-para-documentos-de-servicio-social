@@ -23,11 +23,13 @@ def create_app():
     from controllers.reportes_bp import reportes_bp
     from controllers.avisos_bp import avisos_bp
     from controllers.recepcion_bp import recepcion_bp
+    from controllers.mantenimiento_bp import mantenimiento_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(admin_stats_bp, url_prefix='/api/admin')
     app.register_blueprint(recepcion_bp, url_prefix='/api/admin')
+    app.register_blueprint(mantenimiento_bp, url_prefix='/api/admin/mantenimiento')
     app.register_blueprint(alumno_bp, url_prefix='/api/alumno')
     app.register_blueprint(forms_bp, url_prefix='/api/forms')
     app.register_blueprint(generador_bp, url_prefix='/api/generador')

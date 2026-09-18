@@ -25,6 +25,7 @@ import ConfiguracionCalendario from './pages/admin/ConfiguracionCalendario';
 import PersonalAdmin from './pages/admin/PersonalAdmin';
 import CatalogosAdmin from './pages/admin/CatalogosAdmin';
 import BuzonRecepcionAdmin from './pages/admin/BuzonRecepcionAdmin';
+import MantenimientoAlmacenamiento from './pages/admin/MantenimientoAlmacenamiento';
 
 // Smart Role-Based Private Route
 const PrivateRoute = ({ children, allowedRole }) => {
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="proyectos" element={<ProyectosAuditoria />} />
           <Route path="validacion" element={<ValidacionPipeline />} />
           <Route path="reportes" element={<ReportesOficiales />} />
+          <Route path="mantenimiento" element={<MantenimientoAlmacenamiento />} />
           <Route path="avisos" element={<AvisosNotificaciones />} />
           <Route path="configuracion" element={<ConfiguracionCalendario />} />
           <Route path="catalogos" element={<CatalogosAdmin />} />
