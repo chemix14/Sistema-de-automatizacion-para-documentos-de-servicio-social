@@ -1,0 +1,243 @@
+================================================================================
+           TECNOLOGÍAS Y LIBRERÍAS UTILIZADAS EN EL PROYECTO
+  SISTEMA DE AUTOMATIZACIÓN PARA DOCUMENTOS DE SERVICIO SOCIAL (ITST)
+================================================================================
+
+PROYECTO: Sistema de Automatización para Documentos de Servicio Social
+INSTITUCIÓN: Instituto Tecnológico Superior de Teziutlán (ITST)
+ARQUITECTURA: Cliente - Servidor desacoplado (Single Page Application + API RESTful)
+
+--------------------------------------------------------------------------------
+1. INTEGRACIONES EXTERNAS, AUTENTICACIÓN Y SERVICIOS DE CORREO
+--------------------------------------------------------------------------------
+
+1.1. AUTENTICACIÓN E IDENTIDAD INSTITUCIONAL:
+   • Microsoft Identity Platform (Microsoft Entra ID / Azure Active Directory):
+     - Protocolos: OAuth 2.0 y OpenID Connect.
+     - Flujo implementado: Authorization Code Flow con PKCE y secreto de cliente.
+     - Inicio de sesión único (SSO) con cuentas institucionales oficiales (@teziutlan.tecnm.mx).
+     - Claims de identidad utilizados: preferred_username, email, upn, name.
+
+1.2. API DE CORREO Y PERFIL (MICROSOFT GRAPH API):
+   • Microsoft Graph API v1.0 (https://graph.microsoft.com/v1.0):
+     - Permiso "User.Read":
+       Obtención de datos de perfil, correo institucional verificado, nombre completo y fotografía del usuario.
+     - Permiso "Mail.Send":
+       Despacho automatizado de notificaciones y avisos oficiales por correo electrónico directamente desde la bandeja institucional del usuario logueado mediante el endpoint:
+       POST https://graph.microsoft.com/v1.0/me/sendMail
+     - Endpoint de contingencia para servicios del sistema:
+       POST https://graph.microsoft.com/v1.0/users/{email}/sendMail
+     - Soporte de archivos adjuntos codificados en Base64 (formato #microsoft.graph.fileAttachment) para remitir formatos Excel y cartas generadas automáticamente.
+     - Gestión de ciclo de vida de tokens: Almacenamiento seguro de Access Token y Refresh Token con renovación automática transparente.
+
+1.3. PROTOCOLO DE CORREO ALTERNO (FALLBACK SMTP):
+   • Servidor SMTP Institucional / Office 365:
+     - Host: smtp.office365.com (o servidor SMTP propio configurable en BD).
+     - Puerto: 587 (con cifrado STARTTLS) o 465 (SSL).
+     - Autenticación SMTP autenticada con remitente dinámico.
+     - Utilizado como mecanismo redundante en caso de no contar con sesión activa delegada de Microsoft Graph.
+
+1.4. CONTROL DE SESIONES PROPIO (JWT):
+   • JSON Web Tokens (JWT):
+     - Algoritmo de firma: HMAC-SHA256 (HS256).
+     - Transporte seguro mediante cabeceras HTTP: Authorization: Bearer <token>.
+     - Desacoplamiento de credenciales: el frontend nunca manipula contraseñas ni tokens sensibles de Azure.
+
+--------------------------------------------------------------------------------
+2. BACKEND (TECNOLOGÍAS Y LIBRERÍAS DE PYTHON)
+--------------------------------------------------------------------------------
+
+Entorno de Ejecución: Python 3.14 / Python 3.x (Virtual Environment .venv)
+
+2.1. FRAMEWORK WEB Y ARQUITECTURA API REST:
+   • Flask (3.0.0):
+     Framework principal micro-web de Python. Maneja el ruteo mediante Blueprints modulares (auth_bp, admin_bp, alumno_bp, forms_bp, generador_bp, reportes_bp, avisos_bp, recepcion_bp, admin_stats_bp), ciclo de peticiones, endpoints JSON y controladores REST.
+   • Flask-CORS (6.0.5):
+     Manejo de Cross-Origin Resource Sharing (CORS) permitiendo peticiones seguras entre el frontend (Vite en puerto 5173 / red local) y el backend Flask (puerto 5000).
+   • Werkzeug (3.1.8):
+     Capa base de utilidades WSGI de Flask, utilizada para sanitización y control de nombres de archivos subidos al servidor mediante `secure_filename`.
+   • Jinja2 (3.1.6):
+     Motor de plantillas integrado en el ecosistema Flask.
+
+2.2. SEGURIDAD Y AUTENTICACIÓN:
+   • msal (1.24.1) [Microsoft Authentication Library for Python]:
+     Librería oficial de Microsoft para Python. Implementa la clase `ConfidentialClientApplication` para iniciar el flujo de autenticación, validar el código de autorización, intercambiar tokens y refrescar access tokens delegados usando el refresh token.
+   • PyJWT (2.13.0):
+     Codificación, firma, expiración y decodificación de tokens de sesión JWT entre cliente y servidor.
+   • cryptography (43.0.3):
+     Criptografía simétrica y asimétrica de bajo nivel requerida para la verificación segura de certificados de Microsoft y claves criptográficas de tokens.
+
+2.3. BASE DE DATOS Y PERSISTENCIA:
+   • mysql-connector-python (9.6.0):
+     Driver y conector nativo de Oracle para comunicación con el motor relacional MySQL / MariaDB (`servicio_social_itst`). Implementa clases de conexión `Database` (patrón Singleton), manejo de transacciones con commit/rollback y cursores con formato diccionario (`dictionary=True`).
+   • MySQL Server / MariaDB:
+     Motor de base de datos relacional con integridad referencial, llaves foráneas y soporte UTF-8mb4.
+
+2.4. GENERACIÓN, PROCESAMIENTO Y LECTURA DE DOCUMENTOS:
+   • openpyxl (3.1.5):
+     Librería especializada en hojas de cálculo Microsoft Excel (.xlsx). Utilizada intensivamente para:
+     - Llenado automático de plantillas oficiales de servicio social (F-RPS-01, F-RPS-03, F-RPS-04, F-RPS-08, etc.).
+     - Inserción dinámica de datos del alumno y del proyecto en celdas parametrizadas.
+     - Generación de reportes ejecutivos y Bitácora de Seguimiento Oficial al Prestante con estilos institucionales (colores de fondo #FFFF00 para pendientes, fuentes Calibri, bordes, alineación centrada y fusión de celdas por fases).
+     - Inserción de imágenes y firmas digitales (`openpyxl.drawing.image.Image`).
+   • python-docx (1.1.0):
+     Librería para la creación, lectura y edición programática de documentos de Microsoft Word (.docx). Permite reemplazar marcadores en formatos como el Plan de Trabajo (D-RPS-01) y Cartas de Aceptación.
+   • pandas (3.0.5):
+     Procesamiento y estructuración de tablas de datos, análisis de listas de estudiantes y migración masiva de registros.
+   • numpy (2.5.2):
+     Operaciones numéricas y vectoriales de soporte para pandas y análisis estadístico del sistema.
+   • Pillow / PIL (12.1.1):
+     Procesamiento digital de imágenes. Permite validar formatos, redimensionar firmas gráficas, sellos digitales y preparar recursos visuales para ser embebidos en reportes.
+   • lxml (6.1.2) & et_xmlfile (2.0.0):
+     Parsers de alto rendimiento para estructuras XML, utilizados internamente por `openpyxl` y `python-docx` para acelerar la manipulación de documentos Office Open XML.
+
+2.5. COMUNICACIONES HTTP Y SERVICIOS DE RED:
+   • requests (2.31.0):
+     Cliente HTTP estándar para Python utilizado para interactuar directamente con la API REST de Microsoft Graph (envío de correos, descarga de metadatos de usuario).
+   • urllib3 (2.7.0), certifi, charset-normalizer, idna:
+     Pila de conectividad de bajo nivel para requests con soporte de TLS/SSL robusto y validación estricta de certificados.
+
+2.6. AUTOMATIZACIÓN Y PRUEBAS HEADLESS:
+   • playwright (1.62.0):
+     Librería de automatización web headless para validaciones de flujo completo y pruebas automatizadas en navegador.
+
+2.7. CONFIGURACIÓN Y VARIABLES DE ENTORNO:
+   • python-dotenv (1.0.1):
+     Carga transparente de variables de configuración y credenciales sensibles desde archivos `.env` (credenciales de base de datos, Client ID de Azure, Client Secret, etc.).
+
+2.8. MÓDULOS DE LA BIBLIOTECA ESTÁNDAR DE PYTHON:
+   • smtplib: Cliente para envío de correo mediante protocolo SMTP con soporte de conexión segura STARTTLS.
+   • email.mime (MIMEMultipart, MIMEText, MIMEBase, encoders): Construcción de mensajes MIME multipartes con cuerpo HTML y archivos adjuntos binarios.
+   • re: Motor de expresiones regulares para parseo de claves de formato, limpieza de nombres de documentos y normalización de textos.
+   • datetime & time: Manejo de fechas, plazos de bimestres, detección de vencimientos y marcas temporales UNIX.
+   • io (BytesIO): Generación y manipulación de archivos Excel y Word en memoria para descarga en streaming sin necesidad de almacenamiento temporal en disco.
+   • base64: Codificación y decodificación binaria para adjuntos de correo y firmas electrónicas.
+   • json: Serialización y deserialización de estructuras de datos para las respuestas de la API.
+   • os & sys: Operaciones con el sistema operativo, gestión de rutas de archivos y manipulación de sys.path.
+   • shutil: Copia y manipulación de archivos de plantillas.
+
+--------------------------------------------------------------------------------
+3. FRONTEND (TECNOLOGÍAS, FRAMEWORK Y LIBRERÍAS DE JAVASCRIPT)
+--------------------------------------------------------------------------------
+
+Entorno de Ejecución: Node.js (v20+) y npm
+
+3.1. HERRAMIENTA DE CONSTRUCCIÓN Y EMPAQUETADO:
+   • Vite (5.2.0):
+     Entorno de desarrollo ágil y empaquetador de producción ultra rápido basado en Rollup y ES Modules nativos con Hot Module Replacement (HMR).
+   • @vitejs/plugin-react (4.2.1):
+     Plugin oficial de Vite para soporte de React con Fast Refresh mediante Babel.
+
+3.2. BIBLIOTECA PRINCIPAL DE INTERFAZ:
+   • React (18.2.0):
+     Biblioteca declarativa para la construcción de interfaces de usuario basada en componentes funcionales reactivos.
+     Hooks utilizados: useState, useEffect, useMemo, useRef, useCallback.
+   • React DOM (18.2.0):
+     Renderizador para el árbol del Document Object Model en navegadores web.
+
+3.3. ENRUTAMIENTO Y NAVEGACIÓN:
+   • react-router-dom (6.30.3):
+     Enrutador declarativo para aplicaciones Single Page Application (SPA).
+     Funcionalidades implementadas:
+     - Protección de rutas privadas (`AdminLayout`, `StudentLayout`).
+     - Redirección inteligente post-login según el rol del usuario (ADMIN vs ESTUDIANTE).
+     - Captura de parámetros dinámicos de URL (`useParams`, `useNavigate`, `useLocation`).
+
+3.4. ICONOGRAFÍA Y ELEMENTOS VISUALES:
+   • lucide-react (0.368.0):
+     Conjunto de más de 100 iconos vectoriales SVG limpios y modernos utilizados en toda la interfaz (navegación, botones, estados de documentos, badges de alerta y barras de herramientas).
+
+3.5. CONSTRUCTOR VISUAL DE FORMULARIOS (DRAG & DROP):
+   • @dnd-kit/core (6.1.0):
+     Librería moderna, accesible y ligera para interacciones de arrastrar y soltar (Drag and Drop).
+   • @dnd-kit/sortable (8.0.0):
+     Módulo para reordenamiento interactivo vertical y horizontal de componentes en el diseñador de formatos (FormBuilder).
+   • @dnd-kit/utilities (3.2.2):
+     Utilidades matemáticas y de animación para transformaciones CSS suaves durante el arrastre.
+
+3.6. CARGA INTERACTIVA DE ARCHIVOS:
+   • react-dropzone (15.0.0):
+     Zona interactiva con soporte de arrastrar y soltar para la subida de expedientes y evidencias en formato PDF, Word y Excel por parte de los alumnos.
+
+3.7. DIÁLOGOS, MODALES Y NOTIFICACIONES:
+   • sweetalert2 (11.26.25):
+     Librería de ventanas modales avanzadas para:
+     - Mensajes de confirmación para acciones críticas (aprobación, rechazo masivo de formatos, cambio de roles).
+     - Toasts flotantes automáticos de éxito/error.
+     - Indicadores interactivos de carga (loaders) durante la generación y descarga de reportes.
+
+3.8. CLIENTE HTTP Y COMUNICACIÓN CON EL SERVIDOR:
+   • axios (1.6.8):
+     Cliente HTTP basado en promesas para consumir la API REST de Flask. Soporte de interceptores, envío de credenciales Bearer JWT y manejo de descargas binarias tipo Blob.
+   • Fetch API (Nativa de JavaScript):
+     Peticiones asíncronas para flujos de autenticación, validación de sesiones y streaming de descargas.
+
+3.9. SISTEMA DE DISEÑO Y ESTILOS:
+   • Vanilla CSS3 Avanzado:
+     - Arquitectura basada en tokens de diseño centralizados en `frontend/src/index.css`.
+     - Sistema de maquetación híbrido: CSS Grid y Flexbox responsivo.
+     - Efectos de diseño modernos: Glassmorphism (backdrop-filter), sombras de elevación, microanimaciones en hover y transiciones fluidas.
+     - Paleta de colores oficial acorde a la identidad institucional del Instituto Tecnológico Superior de Teziutlán y el TecNM.
+
+--------------------------------------------------------------------------------
+4. ESTIMACIÓN DE ALMACENAMIENTO EXCLUSIVO (SISTEMA + BASE DE DATOS + DOCUMENTOS)
+   * NOTA: Este cálculo excluye el Sistema Operativo y software externo.
+--------------------------------------------------------------------------------
+
+4.1. COMPONENTE 1: DOCUMENTOS DE LOS ALUMNOS (500 ALUMNOS)
+   • Parámetros:
+     - Población: 500 alumnos.
+     - Peso promedio por archivo: ~200 KB (0.195 MB).
+     - Rango de entrega: De 100 a 150 documentos por alumno (contando observaciones y reenvíos).
+
+   A) Escenario Base (100 documentos por alumno):
+      - 500 alumnos × 100 documentos = 50,000 archivos.
+      - Almacenamiento por alumno = 100 × 200 KB = 20,000 KB = 20 MB.
+      - Subtotal Documentos Base = 50,000 × 200 KB = 10,000,000 KB = 10.00 GB (9.54 GiB).
+
+   B) Escenario con Reenvíos / Correcciones (125 documentos por alumno):
+      - 500 alumnos × 125 documentos = 62,500 archivos.
+      - Subtotal Documentos Moderado = 62,500 × 200 KB = 12,500,000 KB = 12.50 GB (11.92 GiB).
+
+   C) Escenario Máximo de Versiones (150 documentos por alumno):
+      - 500 alumnos × 150 documentos = 75,000 archivos.
+      - Subtotal Documentos Máximo = 75,000 × 200 KB = 15,000,000 KB = 15.00 GB (14.31 GiB).
+
+4.2. COMPONENTE 2: BASE DE DATOS RELACIONAL (MYSQL)
+   • Almacenamiento de metadatos de las 50,000 a 75,000 entregas, estados, fechas límites,
+     esquemas JSON de formularios, historial de auditoría, proyectos, coordinadores y usuarios:
+     - Promedio por registro en `expediente_entregas` (con índices B-Tree): ~2 KB a 4 KB.
+     - 75,000 entregas registradas + bitácoras = ~250 MB a 400 MB.
+     - Tablas maestras, catálogos, claves foráneas y buffer pool: ~100 MB.
+     - Subtotal Base de Datos = ~0.35 GB a 0.50 GB (350 MB a 500 MB).
+
+4.3. COMPONENTE 3: EL SISTEMA (CÓDIGO FUENTE, PLANTILLAS Y DEPENDENCIAS)
+   • Medición real de los archivos del proyecto en disco:
+     - Backend Flask (controladores, modelos, lógica de negocio y plantillas Word/Excel): ~9.5 MB.
+     - Frontend React en producción (bundle optimizado y compilado en `frontend/dist`): ~0.8 MB.
+     - Entorno Virtual de Python (`.venv`) con todas las librerías instaladas
+       (openpyxl, msal, pandas, pillow, mysql-connector, etc.): ~461 MB.
+     - Subtotal Sistema Completo = ~471 MB ≈ 0.47 GB.
+
+4.4. TABLA RESUMEN DE ALMACENAMIENTO TOTAL EXCLUSIVO
+   ┌────────────────────────────────────────────────────────┬──────────────────┐
+   │ COMPONENTE                                             │ ESPACIO EN DISCO │
+   ├────────────────────────────────────────────────────────┼──────────────────┤
+   │ 1. El Sistema (Código Flask + React build + .venv)     │ ~0.47 GB (471 MB)│
+   │ 2. Base de Datos MySQL (Esquema, tablas e índices)     │ ~0.40 GB (400 MB)│
+   │ 3. Documentos: Escenario Base (100 docs / alumno)      │ 10.00 GB neto    │
+   │    Documentos: Escenario Máximo (150 docs / alumno)    │ 15.00 GB neto    │
+   ├────────────────────────────────────────────────────────┼──────────────────┤
+   │ TOTAL EXCLUSIVO REQUERIDO (Escenario 100 docs/alumno)  │ ~10.87 GB        │
+   │ TOTAL EXCLUSIVO REQUERIDO (Escenario 150 docs/alumno)  │ ~15.87 GB        │
+   └────────────────────────────────────────────────────────┴──────────────────┘
+
+4.5. CONCLUSIÓN:
+   Para almacenar exclusivamente el Sistema, la Base de Datos y los Documentos de los 500 alumnos
+   (sin incluir el Sistema Operativo), se requiere en total entre 11 GB y 16 GB de almacenamiento.
+   - Si cada alumno sube 100 documentos exactos: se requieren 10.87 GB.
+   - Si los alumnos suben hasta 150 documentos por persona (reenvíos y correcciones): se requieren 15.87 GB.
+
+================================================================================
+                              FIN DEL DOCUMENTO
+================================================================================

@@ -1,18 +1,32 @@
 # Dependencias de Node.js (Frontend)
 node_modules/
+frontend/node_modules/
 
 # Entorno virtual de Python (Backend)
 venv/
 env/
+.venv/
 .env
+backend/.env
+
+# Compilados y builds
+dist/
+frontend/dist/
+build/
 
 # Archivos de caché de Python
 __pycache__/
 *.pyc
 *.pyo
+*.py[cod]
+
+# Documentos generados
+backend/generados/*
+!backend/generados/.gitkeep
 
 # Archivos de respaldo de base de datos
 *.sql
+!schema_completo.sql
 
 # Otros archivos de sistema y editores
 .DS_Store

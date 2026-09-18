@@ -21,10 +21,22 @@ def mes_texto(mes_num):
     meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
     return meses[mes_num - 1] if 1 <= mes_num <= 12 else str(mes_num)
 
+def safe_set_cell(ws, coord, value):
+    if not coord or value is None:
+        return
+    try:
+        cell = ws[coord]
+        if isinstance(cell, openpyxl.cell.cell.MergedCell):
+            for merge_range in ws.merged_cells.ranges:
+                if coord in merge_range:
+                    ws.cell(row=merge_range.min_row, column=merge_range.min_col, value=value)
+                    return
+        cell.value = value
+    except Exception:
+        pass
+
 @generador_bp.route('/generar/<clave>', methods=['GET', 'POST'])
 def generar_documento(clave):
-    # En un sistema real, sacar el no_control de la sesión (ej. auth JWT)
-    # Por ahora, para pruebas de backend, recibiremos no_control por parámetro o body
     no_control = request.args.get('no_control') or (request.json and request.json.get('no_control'))
     
     if not no_control:
@@ -45,7 +57,7 @@ def generar_documento(clave):
                    d.nombre as dep_nombre, d.titular as dep_titular, d.cargo_titular as dep_cargo_titular,
                    d.calle as dep_calle, d.numero_ext_int as dep_num, d.colonia as dep_colonia,
                    d.municipio as dep_municipio, d.estado as dep_estado, d.codigo_postal as dep_cp,
-                   d.telefono as dep_telefono
+                   d.telefono as dep_telefono, d.correo as dep_correo
             FROM alumnos a
             LEFT JOIN proyectos_servicio p ON a.no_control = p.no_control AND p.estatus != 'CANCELADO'
             LEFT JOIN dependencias d ON p.id_dependencia = d.id_dependencia
@@ -71,14 +83,67 @@ def generar_documento(clave):
         f_inicio_str = f"{f_inicio.day} de {mes_texto(f_inicio.month)} de {f_inicio.year}" if f_inicio else ""
         f_fin_str = f"{f_fin.day} de {mes_texto(f_fin.month)} de {f_fin.year}" if f_fin else ""
 
-        if clave == 'FRPS03':
+        if clave == 'FRPS01':
+            plantilla_path = os.path.join(PLANTILLAS_DIR, "F-RPS-01_SOLICITUD DE SERVICIO SOCIAL.xlsx")
+            if not os.path.exists(plantilla_path): 
+                plantilla_path = os.path.join(PLANTILLAS_DIR, "F-RPS-01_SOLICITUD_DE_SERVICIO_SOCIAL.xlsx")
+            if not os.path.exists(plantilla_path): return jsonify({"error": "Plantilla F-RPS-01 no encontrada"}), 404
+            
+            wb = openpyxl.load_workbook(plantilla_path)
+            ws = wb.active
+
+            # 1. Datos Personales
+            safe_set_cell(ws, 'C12', str(datos.get('nombre') or ""))
+            safe_set_cell(ws, 'I12', str(datos.get('sexo') or ""))
+            safe_set_cell(ws, 'B13', str(datos.get('telefono') or ""))
+            safe_set_cell(ws, 'E13', f"{datos.get('calle') or ''} {datos.get('numero_ext_int') or ''} {datos.get('colonia') or ''}".strip())
+            safe_set_cell(ws, 'C14', str(datos.get('ciudad') or "Teziutlán"))
+            safe_set_cell(ws, 'F14', str(datos.get('estado') or "Puebla"))
+            safe_set_cell(ws, 'H14', str(datos.get('correo_institucional') or ""))
+            safe_set_cell(ws, 'B15', str(datos.get('correo_personal') or ""))
+
+            # 2. Escolaridad
+            safe_set_cell(ws, 'B18', str(datos.get('no_control') or ""))
+            safe_set_cell(ws, 'E18', str(datos.get('carrera') or ""))
+            safe_set_cell(ws, 'E19', str(datos.get('semestre') or "7"))
+            safe_set_cell(ws, 'B19', str(datos.get('periodo') or "ENE-JUN-2026"))
+
+            # 3. Datos del Proyecto
+            safe_set_cell(ws, 'C21', str(datos.get('nombre_proyecto') or ""))
+            safe_set_cell(ws, 'C23', f_inicio_str)
+            safe_set_cell(ws, 'C24', f_fin_str)
+
+            # 4. Dependencia
+            safe_set_cell(ws, 'C26', str(datos.get('dep_nombre') or ""))
+            safe_set_cell(ws, 'C27', str(datos.get('dep_titular') or ""))
+            safe_set_cell(ws, 'C28', str(datos.get('dep_cargo_titular') or ""))
+            safe_set_cell(ws, 'C30', str(datos.get('responsable_nombre') or ""))
+            safe_set_cell(ws, 'C31', str(datos.get('responsable_cargo') or ""))
+            safe_set_cell(ws, 'C32', str(datos.get('supervisor_nombre') or ""))
+            safe_set_cell(ws, 'C33', str(datos.get('supervisor_cargo') or ""))
+            safe_set_cell(ws, 'C34', str(datos.get('dep_telefono') or ""))
+            safe_set_cell(ws, 'C35', f"{datos.get('dep_calle') or ''} {datos.get('dep_num') or ''} {datos.get('dep_colonia') or ''}".strip())
+            safe_set_cell(ws, 'C36', str(datos.get('dep_municipio') or "Teziutlán"))
+            safe_set_cell(ws, 'C37', str(datos.get('dep_estado') or "Puebla"))
+            safe_set_cell(ws, 'C38', str(datos.get('dep_correo') or ""))
+
+            # Actividades
+            safe_set_cell(ws, 'A35', f"1.- {actividades[0]}" if actividades[0] else "")
+            safe_set_cell(ws, 'A36', f"2.- {actividades[1]}" if actividades[1] else "")
+            safe_set_cell(ws, 'A37', f"3.- {actividades[2]}" if actividades[2] else "")
+
+            salida_path = os.path.join(GENERADOS_DIR, f"{clave}_{no_control}.xlsx")
+            wb.save(salida_path)
+            return send_file(salida_path, as_attachment=True)
+
+        elif clave == 'FRPS03':
             plantilla_path = os.path.join(PLANTILLAS_DIR, "F-RPS-03_ CARTA COMPROMISO.xlsx")
             if not os.path.exists(plantilla_path): return jsonify({"error": "Plantilla no encontrada"}), 404
             
             wb = openpyxl.load_workbook(plantilla_path)
             ws = wb.active
             
-            ws['S5'] = str(datos.get('semestre') or "")
+            safe_set_cell(ws, 'S5', str(datos.get('semestre') or ""))
             
             # Map carrera
             carrera_val = str(datos.get('carrera') or "").upper()
@@ -87,25 +152,24 @@ def generar_documento(clave):
                 'SISTEMAS COMPUTACIONALES': 'S9', 'MECATRÓNICA': 'S10',
                 'INDUSTRIAS ALIMENTARIAS': 'S11', 'TURISMO': 'S12', 'ANIMACIÓN DIGITAL': 'S13'
             }
-            # Marcar con X la celda correspondiente
             for key, celda in carreras_map.items():
                 if key in carrera_val:
-                    ws[celda] = '( X )'
+                    safe_set_cell(ws, celda, '( X )')
                     break
 
-            ws['A11'] = f"Nombre del prestador(a) del Servicio Social: {datos.get('nombre')}"
-            ws['A12'] = f"Número de Control: {datos.get('no_control')}"
-            ws['E12'] = f"Domicilio: {datos.get('calle')} {datos.get('numero_ext_int') or ''} {datos.get('colonia') or ''}"
-            ws['A13'] = f"Teléfono: {datos.get('telefono')}"
-            ws['A14'] = f"Dependencia u Organismo: {datos.get('dep_nombre')}"
-            ws['A15'] = f"Domicilio de la Dependencia: {datos.get('dep_calle')} {datos.get('dep_num') or ''} {datos.get('dep_colonia') or ''} {datos.get('dep_municipio')}"
-            ws['A16'] = f"Nombre del Responsable del Programa: {datos.get('responsable_nombre')}"
-            ws['C17'] = f_inicio_str
-            ws['H17'] = f_fin_str
+            safe_set_cell(ws, 'A11', f"Nombre del prestador(a) del Servicio Social: {datos.get('nombre')}")
+            safe_set_cell(ws, 'A12', f"Número de Control: {datos.get('no_control')}")
+            safe_set_cell(ws, 'E12', f"Domicilio: {datos.get('calle') or ''} {datos.get('numero_ext_int') or ''} {datos.get('colonia') or ''}")
+            safe_set_cell(ws, 'A13', f"Teléfono: {datos.get('telefono')}")
+            safe_set_cell(ws, 'A14', f"Dependencia u Organismo: {datos.get('dep_nombre')}")
+            safe_set_cell(ws, 'A15', f"Domicilio de la Dependencia: {datos.get('dep_calle') or ''} {datos.get('dep_num') or ''} {datos.get('dep_colonia') or ''} {datos.get('dep_municipio') or ''}")
+            safe_set_cell(ws, 'A16', f"Nombre del Responsable del Programa: {datos.get('responsable_nombre')}")
+            safe_set_cell(ws, 'C17', f_inicio_str)
+            safe_set_cell(ws, 'H17', f_fin_str)
             
             hoy = datetime.now()
-            ws['A21'] = f"En la ciudad de Teziutlán, Puebla al día {hoy.day}"
-            ws['G21'] = mes_texto(hoy.month)
+            safe_set_cell(ws, 'A21', f"En la ciudad de Teziutlán, Puebla al día {hoy.day}")
+            safe_set_cell(ws, 'G21', mes_texto(hoy.month))
 
             salida_path = os.path.join(GENERADOS_DIR, f"{clave}_{no_control}.xlsx")
             wb.save(salida_path)
@@ -118,7 +182,7 @@ def generar_documento(clave):
             wb = openpyxl.load_workbook(plantilla_path)
             ws = wb.active
             
-            ws['L8'] = str(datos.get('semestre') or "")
+            safe_set_cell(ws, 'L8', str(datos.get('semestre') or ""))
             
             carrera_val = str(datos.get('carrera') or "").upper()
             carreras_map = {
@@ -128,51 +192,52 @@ def generar_documento(clave):
             }
             for key, celda in carreras_map.items():
                 if key in carrera_val:
-                    ws[celda] = '( X )'
+                    safe_set_cell(ws, celda, '( X )')
                     break
 
             nombre_completo = datos.get('nombre') or ""
             partes_nombre = nombre_completo.split()
             if len(partes_nombre) >= 3:
-                ws['D11'] = partes_nombre[-2]  # Paterno
-                ws['G11'] = partes_nombre[-1]  # Materno
-                ws['B11'] = " ".join(partes_nombre[:-2])  # Nombres
+                safe_set_cell(ws, 'D11', partes_nombre[-2])
+                safe_set_cell(ws, 'G11', partes_nombre[-1])
+                safe_set_cell(ws, 'B11', " ".join(partes_nombre[:-2]))
             else:
-                ws['B11'] = nombre_completo
-                
-            ws['B13'] = datos.get('calle')
-            ws['D13'] = datos.get('numero_ext_int')
-            ws['F13'] = datos.get('colonia')
-            ws['H13'] = datos.get('ciudad')
-            ws['E14'] = f"NÚMERO DE CONTROL: {datos.get('no_control')}"
-            ws['C15'] = datos.get('correo_institucional')
-            ws['G15'] = f"TELÉFONO: {datos.get('telefono')}"
+                safe_set_cell(ws, 'B11', nombre_completo)
+
+            safe_set_cell(ws, 'I11', str(datos.get('no_control') or ""))
+            safe_set_cell(ws, 'B13', str(datos.get('calle') or ""))
+            safe_set_cell(ws, 'D13', str(datos.get('numero_ext_int') or ""))
+            safe_set_cell(ws, 'F13', str(datos.get('colonia') or ""))
+            safe_set_cell(ws, 'H13', str(datos.get('municipio') or 'Teziutlán'))
+            safe_set_cell(ws, 'B15', str(datos.get('estado') or 'Puebla'))
+            safe_set_cell(ws, 'D15', str(datos.get('codigo_postal') or ""))
+            safe_set_cell(ws, 'F15', str(datos.get('telefono') or ""))
             
-            ws['A19'] = f"NOMBRE DE LA DEPENDENCIA: {datos.get('dep_nombre')}"
-            ws['A20'] = f"NOMBRE COMPLETO DEL TITULAR DE LA DEPENDENCIA: {datos.get('dep_titular')}"
-            ws['A21'] = f"CARGO DEL TITULAR DE LA DEPENDENCIA: {datos.get('dep_cargo_titular')}"
+            safe_set_cell(ws, 'A19', f"NOMBRE DE LA DEPENDENCIA: {datos.get('dep_nombre') or ''}")
+            safe_set_cell(ws, 'A20', f"NOMBRE COMPLETO DEL TITULAR DE LA DEPENDENCIA: {datos.get('dep_titular') or ''}")
+            safe_set_cell(ws, 'A21', f"CARGO DEL TITULAR DE LA DEPENDENCIA: {datos.get('dep_cargo_titular') or ''}")
             
-            ws['B23'] = datos.get('dep_calle')
-            ws['D23'] = datos.get('dep_num')
-            ws['F23'] = datos.get('dep_colonia')
-            ws['H23'] = datos.get('dep_municipio')
-            ws['B25'] = datos.get('dep_estado')
-            ws['D25'] = datos.get('dep_cp')
-            ws['F25'] = datos.get('dep_telefono')
+            safe_set_cell(ws, 'B23', str(datos.get('dep_calle') or ""))
+            safe_set_cell(ws, 'D23', str(datos.get('dep_num') or ""))
+            safe_set_cell(ws, 'F23', str(datos.get('dep_colonia') or ""))
+            safe_set_cell(ws, 'H23', str(datos.get('dep_municipio') or ""))
+            safe_set_cell(ws, 'B25', str(datos.get('dep_estado') or ""))
+            safe_set_cell(ws, 'D25', str(datos.get('dep_cp') or ""))
+            safe_set_cell(ws, 'F25', str(datos.get('dep_telefono') or ""))
             
-            ws['A29'] = f"NOMBRE DEL PROYECTO: {datos.get('nombre_proyecto')}"
-            ws['A30'] = f"OBJETIVO: {datos.get('objetivo')}"
-            ws['A31'] = f"NOMBRE DEL RESPONSABLE DEL PROYECTO EN LA DEPENDENCIA: {datos.get('responsable_nombre')}"
-            ws['A32'] = f"CARGO DEL RESPONSABLE DEL PROYECTO: {datos.get('responsable_cargo')}"
-            ws['A33'] = f"NOMBRE DEL SUPERVISOR DEL PROYECTO EN LA DEPENDENCIA: {datos.get('supervisor_nombre')}"
-            ws['A34'] = f"CARGO DEL SUPERVISIÓN DEL PROYECTO EN LA DEPENDENCIA: {datos.get('supervisor_cargo')}"
+            safe_set_cell(ws, 'A29', f"NOMBRE DEL PROYECTO: {datos.get('nombre_proyecto') or ''}")
+            safe_set_cell(ws, 'A30', f"OBJETIVO: {datos.get('objetivo') or ''}")
+            safe_set_cell(ws, 'A31', f"NOMBRE DEL RESPONSABLE DEL PROYECTO EN LA DEPENDENCIA: {datos.get('responsable_nombre') or ''}")
+            safe_set_cell(ws, 'A32', f"CARGO DEL RESPONSABLE DEL PROYECTO: {datos.get('responsable_cargo') or ''}")
+            safe_set_cell(ws, 'A33', f"NOMBRE DEL SUPERVISOR DEL PROYECTO EN LA DEPENDENCIA: {datos.get('supervisor_nombre') or ''}")
+            safe_set_cell(ws, 'A34', f"CARGO DEL SUPERVISIÓN DEL PROYECTO EN LA DEPENDENCIA: {datos.get('supervisor_cargo') or ''}")
             
-            ws['A54'] = f"1.- {actividades[0]}"
-            ws['A56'] = f"2.- {actividades[1]}"
-            ws['A58'] = f"3.- {actividades[2]}"
+            safe_set_cell(ws, 'A54', f"1.- {actividades[0]}" if actividades[0] else "")
+            safe_set_cell(ws, 'A56', f"2.- {actividades[1]}" if actividades[1] else "")
+            safe_set_cell(ws, 'A58', f"3.- {actividades[2]}" if actividades[2] else "")
             
-            ws['B64'] = f_inicio_str
-            ws['G64'] = f_fin_str
+            safe_set_cell(ws, 'B64', f_inicio_str)
+            safe_set_cell(ws, 'G64', f_fin_str)
 
             salida_path = os.path.join(GENERADOS_DIR, f"{clave}_{no_control}.xlsx")
             wb.save(salida_path)
@@ -183,8 +248,12 @@ def generar_documento(clave):
             if not os.path.exists(plantilla_path): return jsonify({"error": "Plantilla no encontrada"}), 404
             
             cursor.execute("SELECT * FROM planes_trabajo WHERE id_proyecto = %s", (datos['id_proyecto'],))
-            plan = cursor.fetchone()
-            if not plan: return jsonify({"error": "El alumno no ha capturado los datos del Plan de Trabajo"}), 400
+            plan = cursor.fetchone() or {
+                'objetivo_general': datos.get('objetivo') or 'Desarrollar las actividades asignadas de acuerdo al programa de servicio social.',
+                'antecedentes': 'Proyecto institucional de vinculación.',
+                'objetivos_particulares': 'Cumplir en tiempo y forma con el cronograma.',
+                'alcances': 'Impacto favorable en la comunidad y fortalecimiento de competencias.'
+            }
 
             doc = Document(plantilla_path)
             

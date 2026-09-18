@@ -62,7 +62,7 @@ export default function FormVisor() {
         <h1 style={{ color: '#0f172a', margin: 0 }}>Gestión de Formularios</h1>
         <button 
           onClick={() => navigate('/admin/formularios/nuevo')}
-          style={{ padding: '0.75rem 1.5rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+          style={{ padding: '0.75rem 1.5rem', backgroundColor: '#059669', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
         >
           + Nuevo Formulario
         </button>

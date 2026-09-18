@@ -32,7 +32,7 @@ export default function ReportesNotificaciones() {
       text: 'Se enviarán correos recordatorios a todos los alumnos con estado "EN REVISIÓN" o "SIN PROYECTO" mediante Microsoft Graph API.',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#3b82f6',
+      confirmButtonColor: '#059669',
       cancelButtonColor: '#94a3b8',
       confirmButtonText: 'Sí, enviar correos'
     }).then((result) => {
@@ -79,16 +79,16 @@ export default function ReportesNotificaciones() {
         </div>
 
         {/* Tarjeta Notificar Adeudos */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '2rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderTop: '4px solid #3b82f6' }}>
-          <div style={{ backgroundColor: '#eff6ff', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
-            <Mail size={48} color="#3b82f6" />
+        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '2rem', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', borderTop: '4px solid #059669' }}>
+          <div style={{ backgroundColor: '#ecfdf5', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
+            <Mail size={48} color="#059669" />
           </div>
           <h2 style={{ margin: '0 0 0.5rem 0', color: '#0f172a' }}>Notificaciones Institucionales</h2>
           <p style={{ color: '#64748b', marginBottom: '2rem' }}>Usa la API de Microsoft Graph para enviar recordatorios a los estudiantes sobre documentos faltantes o en revisión.</p>
           <button 
             onClick={handleNotify} 
             disabled={loadingMail}
-            style={{ padding: '0.75rem 2rem', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: loadingMail ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ padding: '0.75rem 2rem', backgroundColor: '#059669', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 600, cursor: loadingMail ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
             {loadingMail ? 'Encolando...' : 'Enviar Correos'}
           </button>

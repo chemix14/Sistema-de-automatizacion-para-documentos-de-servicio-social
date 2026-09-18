@@ -11,6 +11,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Documentos generados en runtime
+generados/*
+!generados/.gitkeep
+
 # IDE y sistema operativo
 .vscode/
 .idea/

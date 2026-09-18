@@ -18,7 +18,7 @@ class Config:
     TENANT_ID = os.getenv('TENANT_ID', 'common')
     AUTHORITY = os.getenv('AUTHORITY', f'https://login.microsoftonline.com/{TENANT_ID}')
     REDIRECT_URI = 'http://localhost:5000/api/auth/callback'
-    SCOPE = ["User.Read"]
+    SCOPE = ["User.Read", "Mail.Send"]
 
     # Credenciales de Base de Datos
     DB_HOST = os.getenv('DB_HOST', 'localhost')

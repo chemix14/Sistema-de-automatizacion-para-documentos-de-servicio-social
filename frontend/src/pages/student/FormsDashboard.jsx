@@ -1,172 +1,278 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import { 
+  FileSpreadsheet, 
+  FileText, 
+  Download, 
+  Edit3, 
+  CheckCircle2, 
+  Layers, 
+  Lock, 
+  Clock, 
+  AlertCircle,
+  UploadCloud 
+} from 'lucide-react';
 
 export default function FormsDashboard() {
-  const [noControl, setNoControl] = useState('L23TE0037'); // Default for testing
   const [catalog, setCatalog] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeEtapa, setActiveEtapa] = useState('TODAS');
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/forms/catalog')
+    const token = localStorage.getItem('auth_token');
+    fetch('http://localhost:5000/api/alumno/expediente', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
       .then(res => res.json())
       .then(data => {
-        setCatalog(Array.isArray(data) ? data : []);
+        if (data.documentos) {
+          setCatalog(data.documentos);
+        } else {
+          // Fallback al catálogo general si no hay sesión
+          fetch('http://localhost:5000/api/forms/catalog')
+            .then(r => r.json())
+            .then(cat => setCatalog(Array.isArray(cat) ? cat : []));
+        }
         setLoading(false);
       })
       .catch(err => {
-        console.error("Error fetching catalog:", err);
+        console.error("Error fetching expediente:", err);
         setLoading(false);
       });
   }, []);
 
-  const handleDownload = (clave) => {
-    window.open(`http://localhost:5000/api/generador/generar/${clave}?no_control=${noControl}`, '_blank');
+  const handleDownload = (clave, estado) => {
+    if (estado === 'BLOQUEADO') {
+      Swal.fire({
+        title: 'Formato Bloqueado',
+        text: 'Este documento se encuentra bloqueado actualmente por el Departamento de Servicio Social.',
+        icon: 'info',
+        confirmButtonColor: '#059669'
+      });
+      return;
+    }
+    window.open(`http://localhost:5000/api/generador/generar/${clave}`, '_blank');
   };
 
-  // Group forms by 'etapa'
-  const groupedByEtapa = catalog.reduce((acc, doc) => {
-    const etapa = doc.etapa || 1;
-    if (!acc[etapa]) acc[etapa] = [];
-    acc[etapa].push(doc);
-    return acc;
-  }, {});
+  const handleOpenForm = (id_formulario, estado, clave, nombre) => {
+    if (estado === 'BLOQUEADO') {
+      Swal.fire({
+        title: 'Formato Bloqueado',
+        html: `El formato <b>${clave} - ${nombre}</b> aún no ha sido habilitado por la Coordinación de Servicio Social.`,
+        icon: 'warning',
+        confirmButtonColor: '#059669'
+      });
+      return;
+    }
+    navigate(`/student/formatos/llenar/${id_formulario}`);
+  };
 
-  const etapas = Object.keys(groupedByEtapa).sort((a, b) => parseInt(a) - parseInt(b));
+  const handleOpenEntregaArchivo = (id_documento, estado, clave, nombre) => {
+    if (estado === 'BLOQUEADO') {
+      Swal.fire({
+        title: 'Formato Bloqueado',
+        html: `El formato <b>${clave} - ${nombre}</b> se encuentra temporalmente desvinculado del proceso.`,
+        icon: 'warning',
+        confirmButtonColor: '#059669'
+      });
+      return;
+    }
+    navigate(`/student/formatos/entrega-archivo/${id_documento}`);
+  };
+
+  const getStatusBadge = (estado) => {
+    switch((estado || '').toUpperCase()) {
+      case 'APROBADO':
+        return <span className="badge badge-success"><CheckCircle2 size={12} /> Aprobado</span>;
+      case 'EN_REVISION':
+        return <span className="badge badge-warning"><Clock size={12} /> En Revisión</span>;
+      case 'RECHAZADO':
+        return <span className="badge badge-danger"><AlertCircle size={12} /> Requiere Corrección</span>;
+      case 'PENDIENTE':
+        return <span style={{ padding: '0.2rem 0.55rem', borderRadius: '20px', backgroundColor: '#ffedd5', color: '#c2410c', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Clock size={12} color="#ea580c" /> Pendiente</span>;
+      case 'BLOQUEADO':
+        return <span style={{ padding: '0.2rem 0.55rem', borderRadius: '20px', backgroundColor: '#f1f5f9', color: '#64748b', fontSize: '0.75rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><Lock size={12} /> Bloqueado</span>;
+      case 'DISPONIBLE':
+      default:
+        return <span className="badge badge-primary"><Edit3 size={12} /> Disponible</span>;
+    }
+  };
+
+  const etapasUnicas = ['TODAS', ...Array.from(new Set(catalog.map(d => d.etapa).filter(Boolean)))];
+
+  const filteredDocs = activeEtapa === 'TODAS' 
+    ? catalog 
+    : catalog.filter(d => d.etapa === activeEtapa);
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1 style={{ color: '#0f172a', marginBottom: '0.5rem' }}>Gestión de Formatos de Servicio Social</h1>
-      <p style={{ color: '#64748b', marginBottom: '2rem' }}>
-        Completa y descarga tus documentos oficiales por etapas. (Alumno: {noControl})
-      </p>
+    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ color: '#0f172a', margin: 0, fontSize: '1.75rem', fontWeight: 800 }}>
+          Formatos Oficiales de Servicio Social
+        </h1>
+        <p style={{ color: '#64748b', margin: '0.25rem 0 0', fontSize: '0.95rem' }}>
+          Llena en línea tus formatos oficiales o descarga tus documentos generados automáticamente.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
+        {etapasUnicas.map(etp => (
+          <button
+            key={etp}
+            onClick={() => setActiveEtapa(etp)}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '20px',
+              border: activeEtapa === etp ? '1px solid var(--primary)' : '1px solid transparent',
+              backgroundColor: activeEtapa === etp ? 'var(--primary-light)' : 'transparent',
+              color: activeEtapa === etp ? 'var(--primary)' : '#64748b',
+              fontWeight: activeEtapa === etp ? 700 : 500,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {etp === 'TODAS' ? 'Todos los Formatos' : etp}
+          </button>
+        ))}
+      </div>
 
       {loading ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>Cargando formatos...</div>
-      ) : catalog.length === 0 ? (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>No hay formatos disponibles actualmente.</div>
+        <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b', backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+          Cargando formatos disponibles...
+        </div>
+      ) : filteredDocs.length === 0 ? (
+        <div style={{ padding: '3rem', textAlign: 'center', color: '#94a3b8', backgroundColor: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+          <FileSpreadsheet size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
+          <p style={{ fontWeight: 600, color: '#64748b' }}>No hay formatos en esta etapa.</p>
+        </div>
       ) : (
-        etapas.map(etapa => (
-          <section key={etapa} style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>Etapa {etapa}</h2>
-            <div style={gridStyle}>
-              {groupedByEtapa[etapa].map(doc => {
-                // Determine icon color based on etapa
-                let colorKey = 'blue';
-                if (etapa === '2') colorKey = 'orange';
-                if (etapa === '3') colorKey = 'teal';
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
+          {filteredDocs.map(doc => {
+            const isBlocked = (doc.estado || '').toUpperCase() === 'BLOQUEADO';
+            const isApproved = (doc.estado || '').toUpperCase() === 'APROBADO';
+            const isUnderReview = (doc.estado || '').toUpperCase() === 'EN_REVISION';
 
-                return (
-                  <div key={doc.id_documento} style={cardStyle}>
-                    <div style={iconStyle(colorKey)}><i className="fas fa-file-alt"></i></div>
-                    <h3 style={titleStyle}>{doc.clave}</h3>
-                    <p style={descStyle}>{doc.nombre_documento}</p>
-                    
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                      {doc.tiene_formulario === 1 && (
-                        <button 
-                          onClick={() => navigate(`/student/formatos/llenar/${doc.id_formulario}`)} 
-                          style={btnStyle(colorKey, false)}
-                        >
-                          Llenar Formulario
-                        </button>
-                      )}
-                      {doc.plantilla_existe === 1 && (
-                        <button 
-                          onClick={() => handleDownload(doc.clave)} 
-                          style={btnStyle('gray', true)}
-                        >
-                          Descargar PDF/Excel
-                        </button>
-                      )}
-                      {doc.tiene_formulario === 0 && doc.plantilla_existe === 0 && (
-                         <span style={{ fontSize: '0.8rem', color: '#ef4444' }}>Pendiente de configuración</span>
-                      )}
-                    </div>
+            return (
+              <div 
+                key={doc.id_documento} 
+                style={{ 
+                  backgroundColor: 'white', 
+                  borderRadius: '16px', 
+                  padding: '1.5rem', 
+                  border: '1px solid #e2e8f0', 
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  justifyContent: 'space-between',
+                  opacity: isBlocked ? 0.65 : 1,
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => {
+                  if (!isBlocked) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 16px -4px rgba(0,0,0,0.06)';
+                    e.currentTarget.style.borderColor = '#cbd5e1';
+                  }
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, color: isBlocked ? '#64748b' : '#059669', backgroundColor: isBlocked ? '#f1f5f9' : '#ecfdf5', padding: '0.2rem 0.55rem', borderRadius: '6px' }}>
+                      {doc.clave}
+                    </span>
+                    {getStatusBadge(doc.estado)}
                   </div>
-                );
-              })}
-            </div>
-          </section>
-        ))
+
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.05rem', color: isBlocked ? '#64748b' : '#0f172a', fontWeight: 700, lineHeight: 1.4 }}>
+                    {doc.nombre_documento}
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
+                    Etapa: {doc.etapa}
+                  </span>
+                </div>
+
+                <div style={{ paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                  {doc.tiene_formulario === 1 ? (
+                    <button 
+                      onClick={() => handleOpenForm(doc.id_formulario, doc.estado, doc.clave, doc.nombre_documento)} 
+                      className={isBlocked ? "btn btn-secondary" : isApproved ? "btn btn-success" : "btn btn-primary"}
+                      style={{ 
+                        flex: 1, 
+                        fontSize: '0.82rem', 
+                        padding: '0.5rem 0.8rem',
+                        cursor: isBlocked ? 'not-allowed' : 'pointer',
+                        opacity: isBlocked ? 0.7 : 1
+                      }}
+                      title={isBlocked ? "Formato bloqueado temporalmente" : "Llenar formulario en línea"}
+                    >
+                      {isBlocked ? (
+                        <><Lock size={14} /> Bloqueado</>
+                      ) : isApproved ? (
+                        <><CheckCircle2 size={14} /> Aprobado</>
+                      ) : isUnderReview ? (
+                        <><Clock size={14} /> En Revisión</>
+                      ) : (
+                        <><Edit3 size={14} /> Llenar en Línea</>
+                      )}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => handleOpenEntregaArchivo(doc.id_documento, doc.estado, doc.clave, doc.nombre_documento)} 
+                      className={isBlocked ? "btn btn-secondary" : isApproved ? "btn btn-success" : isUnderReview ? "btn btn-secondary" : "btn btn-primary"}
+                      style={{ 
+                        flex: 1, 
+                        fontSize: '0.82rem', 
+                        padding: '0.5rem 0.8rem',
+                        cursor: isBlocked ? 'not-allowed' : 'pointer',
+                        opacity: isBlocked ? 0.7 : 1,
+                        backgroundColor: isBlocked ? undefined : isApproved ? '#059669' : isUnderReview ? '#f59e0b' : '#047857',
+                        color: (isApproved || isUnderReview || (!isBlocked && doc.tiene_formulario !== 1)) ? 'white' : undefined,
+                        borderColor: isBlocked ? undefined : isApproved ? '#059669' : isUnderReview ? '#f59e0b' : '#047857'
+                      }}
+                      title={isBlocked ? "Formato bloqueado temporalmente" : "Descargar plantilla y entregar archivo firmado"}
+                    >
+                      {isBlocked ? (
+                        <><Lock size={14} /> Bloqueado</>
+                      ) : isApproved ? (
+                        <><CheckCircle2 size={14} /> Aprobado</>
+                      ) : isUnderReview ? (
+                        <><Clock size={14} /> En Revisión</>
+                      ) : (
+                        <><UploadCloud size={14} /> Descargar y Subir</>
+                      )}
+                    </button>
+                  )}
+                  {doc.plantilla_existe === 1 && (
+                    <button 
+                      onClick={() => handleDownload(doc.clave, doc.estado)} 
+                      className="btn btn-secondary"
+                      style={{ 
+                        flex: 'initial', 
+                        fontSize: '0.82rem', 
+                        padding: '0.5rem 0.8rem',
+                        cursor: isBlocked ? 'not-allowed' : 'pointer',
+                        opacity: isBlocked ? 0.6 : 1
+                      }}
+                      title={isBlocked ? "Descarga bloqueada" : "Descargar plantilla oficial"}
+                    >
+                      <Download size={14} /> Descargar
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
 }
-
-const sectionStyle = {
-  marginBottom: '3rem'
-};
-
-const sectionTitleStyle = {
-  fontSize: '1.4rem',
-  color: '#334155',
-  borderBottom: '2px solid #e2e8f0',
-  paddingBottom: '0.5rem',
-  marginBottom: '1.5rem'
-};
-
-const gridStyle = {
-  display: 'grid', 
-  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-  gap: '1.5rem'
-};
-
-const cardStyle = {
-  backgroundColor: 'white',
-  padding: '1.5rem',
-  borderRadius: '16px',
-  boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-  border: '1px solid #e2e8f0',
-  display: 'flex',
-  flexDirection: 'column'
-};
-
-const titleStyle = {
-  fontSize: '1.1rem',
-  color: '#1e293b',
-  margin: '1rem 0 0.25rem 0',
-  fontWeight: '600'
-};
-
-const descStyle = {
-  color: '#64748b',
-  fontSize: '0.875rem',
-  marginBottom: '1.5rem',
-  flexGrow: 1
-};
-
-const iconStyle = (color) => {
-  const colors = {
-    blue: { bg: '#eff6ff', c: '#3b82f6' },
-    green: { bg: '#f0fdf4', c: '#22c55e' },
-    purple: { bg: '#faf5ff', c: '#a855f7' },
-    orange: { bg: '#fff7ed', c: '#f97316' },
-    teal: { bg: '#f0fdfa', c: '#14b8a6' },
-    gray: { bg: '#f1f5f9', c: '#64748b' }
-  };
-  return {
-    width: '48px', height: '48px', borderRadius: '12px',
-    backgroundColor: colors[color].bg, color: colors[color].c,
-    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem'
-  };
-};
-
-const btnStyle = (color, isOutline = false) => {
-  const colors = {
-    blue: '#3b82f6', green: '#22c55e', purple: '#a855f7', orange: '#f97316', teal: '#14b8a6', gray: '#475569'
-  };
-  return {
-    padding: '0.6rem 1rem',
-    borderRadius: '8px',
-    border: isOutline ? `1px solid ${colors[color]}` : 'none',
-    backgroundColor: isOutline ? 'transparent' : colors[color],
-    color: isOutline ? colors[color] : 'white',
-    fontWeight: '600',
-    cursor: 'pointer',
-    flex: 1,
-    textAlign: 'center',
-    transition: 'all 0.2s',
-    fontSize: '0.85rem'
-  };
-};

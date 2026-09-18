@@ -6,7 +6,7 @@ import Swal from 'sweetalert2';
 import FormBuilderCanvas from '../../components/FormBuilderCanvas';
 import PropertiesPanel from '../../components/PropertiesPanel';
 import SidebarTools from '../../components/SidebarTools';
-import { Save } from 'lucide-react';
+import { Save, ArrowLeft, FileText, CheckCircle2, Sparkles, FolderKanban } from 'lucide-react';
 
 function FormBuilderWrapper() {
   const [formFields, setFormFields] = useState([]);
@@ -14,7 +14,7 @@ function FormBuilderWrapper() {
   const [simulatedValues, setSimulatedValues] = useState({});
   const [formName, setFormName] = useState('Nuevo Formulario');
   const [formDescription, setFormDescription] = useState('');
-  const [etapa, setEtapa] = useState('INICIAL');
+  const [etapa, setEtapa] = useState('APERTURA');
   const [plantillaFile, setPlantillaFile] = useState(null);
   const { id } = useParams();
   const navigate = useNavigate();
@@ -27,49 +27,126 @@ function FormBuilderWrapper() {
         .then(res => res.json())
         .then(data => {
           if (!data.error) {
-            setFormName(data.nombre || 'Formulario');
+            setFormName(data.nombre || data.titulo || data.nombre_documento || 'Formulario');
             setFormDescription(data.descripcion || '');
+            if (data.etapa) {
+              setEtapa(data.etapa.toUpperCase());
+            }
             
-            let fields = [];
-            if (data.secciones) {
-              data.secciones.sort((a, b) => a.orden - b.orden).forEach((sec, sIdx) => {
-                if (sec.titulo && sec.titulo !== 'Sección Única') {
-                  fields.push({
-                    id: `heading_sec_${sec.id_seccion}`,
-                    nombre_variable: `heading_sec_${sec.id_seccion}`,
+            let rawCampos = [];
+            if (data.secciones && data.secciones.length > 0) {
+              data.secciones.sort((a, b) => (a.orden || 0) - (b.orden || 0)).forEach((sec, sIdx) => {
+                const hasHeadingAlready = sec.campos && sec.campos.some(c => c.tipo_campo === 'heading');
+                if (sec.titulo && sec.titulo !== 'Sección Única' && !hasHeadingAlready) {
+                  rawCampos.push({
+                    id_campo: `sec_${sec.id_seccion || sIdx}`,
                     tipo_campo: 'heading',
                     etiqueta: sec.titulo,
-                    texto_ayuda: sec.descripcion,
+                    texto_ayuda: sec.descripcion || '',
                     ancho_columna: 'col-12',
                     orden: (sIdx * 1000)
                   });
                 }
                 if (sec.campos) {
-                  fields = fields.concat(sec.campos.map(c => ({
-                    ...c,
-                    id: `field_${c.id_campo}`,
-                    opciones: c.opciones_json ? JSON.parse(c.opciones_json) : [],
-                    habilitar_condicion: !!c.condicion_campo,
-                    orden: (sIdx * 1000) + c.orden
-                  })));
+                  sec.campos.forEach(c => {
+                    rawCampos.push({
+                      ...c,
+                      orden: (sIdx * 1000) + (c.orden || 0)
+                    });
+                  });
                 }
               });
             }
             if (data.campos_sin_seccion) {
-              fields = fields.concat(data.campos_sin_seccion.map(c => ({
-                ...c,
-                id: `field_${c.id_campo}`,
-                opciones: c.opciones_json ? JSON.parse(c.opciones_json) : [],
-                habilitar_condicion: !!c.condicion_campo,
-                orden: 999000 + c.orden
-              })));
+              data.campos_sin_seccion.forEach(c => {
+                rawCampos.push({
+                  ...c,
+                  orden: 999000 + (c.orden || 0)
+                });
+              });
             }
-            fields.sort((a, b) => a.orden - b.orden);
+
+            rawCampos.sort((a, b) => (a.orden || 0) - (b.orden || 0));
+
+            const fields = rawCampos.map(c => {
+              let parsedOptions = [];
+              if (c.opciones_json) {
+                try {
+                  parsedOptions = typeof c.opciones_json === 'string' ? JSON.parse(c.opciones_json) : c.opciones_json;
+                } catch(e) {
+                  parsedOptions = [];
+                }
+              }
+              let parsedMapeoAvanzado = [];
+              if (c.mapeo_excel_avanzado) {
+                try {
+                  parsedMapeoAvanzado = typeof c.mapeo_excel_avanzado === 'string' ? JSON.parse(c.mapeo_excel_avanzado) : c.mapeo_excel_avanzado;
+                } catch(e) {
+                  parsedMapeoAvanzado = [];
+                }
+              }
+              let parsedReglas = { habilitar: false, campo_objetivo: 'self', reglas: [] };
+              if (c.reglas_transformacion) {
+                try {
+                  parsedReglas = typeof c.reglas_transformacion === 'string' ? JSON.parse(c.reglas_transformacion) : c.reglas_transformacion;
+                } catch(e) {
+                  parsedReglas = { habilitar: false, campo_objetivo: 'self', reglas: [] };
+                }
+              }
+
+              return {
+                ...c,
+                id: c.id ? c.id : (c.id_campo ? `field_${c.id_campo}` : `field_${c.nombre_variable || Date.now()}`),
+                opciones: parsedOptions,
+                mapeo_excel_avanzado: parsedMapeoAvanzado,
+                habilitar_condicion: !!c.habilitar_condicion,
+                condicion_campo: c.condicion_campo || '',
+                condicion_operador: c.condicion_operador || 'igual',
+                condicion_valor: c.condicion_valor || '',
+                condicion_accion: c.condicion_accion || 'mostrar',
+                habilitar_condicion_llenado: !!(parsedReglas?.habilitar),
+                campo_objetivo_llenado: parsedReglas?.campo_objetivo || c.campo_objetivo || 'self',
+                reglas_llenado: Array.isArray(parsedReglas?.reglas) ? parsedReglas.reglas : [],
+                requerido: !!c.requerido,
+                solo_lectura: !!c.solo_lectura,
+                usar_fecha_actual: !!c.usar_fecha_actual,
+                etiqueta: c.etiqueta || (c.tipo_campo === 'heading' ? 'Título de Sección' : ''),
+                texto_ayuda: c.texto_ayuda || '',
+                tamano_texto: c.tamano_texto || 'h2',
+                ancho_columna: c.ancho_columna || (c.tipo_campo === 'heading' ? 'col-12' : 'col-md-6'),
+                fuente_contexto: c.tabla_origen || c.fuente_contexto || 'NINGUNO',
+                fuente_columna: c.columna_origen || c.fuente_columna || '',
+                alineacion_opciones: c.alineacion_opciones || (c.tipo_campo === 'radio' ? 'horizontal' : 'vertical'),
+                modo_mapeo_excel: c.modo_mapeo_excel || (parsedMapeoAvanzado.length > 0 && !c.celda_excel ? 'individual' : 'unica'),
+                ancho_imagen: c.ancho_imagen || 150,
+                alto_imagen: c.alto_imagen || 120,
+                extensiones_permitidas: c.extensiones_permitidas || (c.tipo_campo === 'file' ? '.jpg, .jpeg, .png, .webp' : ''),
+                tamano_max_mb: c.tamano_max_mb || 5
+              };
+            });
             setFormFields(fields);
           }
         });
     }
   }, [id]);
+
+  useEffect(() => {
+    if (docId && !id) {
+      fetch(`http://127.0.0.1:5000/api/forms/documento/${docId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error) {
+            if (data.nombre_documento) {
+              setFormName(data.nombre_documento);
+            }
+            if (data.etapa) {
+              setEtapa(data.etapa.toUpperCase());
+            }
+          }
+        })
+        .catch(err => console.error("Error cargando documento:", err));
+    }
+  }, [docId, id]);
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -87,8 +164,27 @@ function FormBuilderWrapper() {
     const newField = {
       ...fieldConfig,
       id: `field_${Date.now()}`,
-      nombre_variable: `var_${Date.now()}`,
-      requerido: false
+      nombre_variable: fieldConfig.tipo_campo === 'heading' ? `heading_${Date.now()}` : `var_${Date.now()}`,
+      etiqueta: fieldConfig.etiqueta || (fieldConfig.tipo_campo === 'heading' ? 'Título de Sección' : 'Nuevo Campo'),
+      texto_ayuda: '',
+      ancho_columna: fieldConfig.tipo_campo === 'heading' ? 'col-12' : 'col-md-6',
+      requerido: false,
+      solo_lectura: false,
+      fuente_contexto: 'NINGUNO',
+      fuente_columna: '',
+      tamano_texto: 'h2',
+      alineacion_opciones: fieldConfig.alineacion_opciones || (fieldConfig.tipo_campo === 'radio' ? 'horizontal' : 'vertical'),
+      celda_excel: '',
+      modo_mapeo_excel: fieldConfig.modo_mapeo_excel || 'unica',
+      mapeo_excel_avanzado: fieldConfig.mapeo_excel_avanzado || [],
+      opciones: fieldConfig.opciones || (['select', 'radio', 'checkbox'].includes(fieldConfig.tipo_campo) ? ['Opción 1', 'Opción 2', 'Opción 3'] : []),
+      ancho_imagen: fieldConfig.ancho_imagen || 150,
+      alto_imagen: fieldConfig.alto_imagen || 120,
+      extensiones_permitidas: fieldConfig.tipo_campo === 'file' ? '.jpg, .jpeg, .png, .webp' : (fieldConfig.extensiones_permitidas || ''),
+      tamano_max_mb: fieldConfig.tamano_max_mb || 5,
+      habilitar_condicion_llenado: false,
+      campo_objetivo_llenado: 'self',
+      reglas_llenado: []
     };
     setFormFields([...formFields, newField]);
   };
@@ -98,7 +194,22 @@ function FormBuilderWrapper() {
   };
 
   const handleSimulateChange = (variableName, value) => {
-    setSimulatedValues(prev => ({ ...prev, [variableName]: value }));
+    setSimulatedValues(prev => {
+      let next = { ...prev, [variableName]: value };
+      
+      const sourceField = formFields.find(f => f.nombre_variable === variableName);
+      if (sourceField && sourceField.habilitar_condicion_llenado && Array.isArray(sourceField.reglas_llenado)) {
+        const valStr = String(value || '').trim().toLowerCase();
+        const matched = sourceField.reglas_llenado.find(r => 
+          String(r.opcion || '').trim().toLowerCase() === valStr
+        );
+        const targetVar = sourceField.campo_objetivo_llenado;
+        if (matched && targetVar && targetVar !== 'self') {
+          next[targetVar] = matched.texto !== undefined ? matched.texto : '';
+        }
+      }
+      return next;
+    });
   };
 
   const handleRemoveField = (f_id) => {
@@ -138,34 +249,74 @@ function FormBuilderWrapper() {
     }
 
     const esquema = {
+      titulo: formName,
       descripcion: formDescription,
       tipo_formulario: 'CON_CAMPOS',
       secciones: [
         {
           titulo: 'Sección Única',
           orden: 1,
-          campos: formFields.map((f, idx) => {
-            const base = {
-              nombre_variable: f.nombre_variable,
-              etiqueta: f.etiqueta,
-              tipo_campo: f.tipo_campo,
-              ancho_columna: f.ancho_columna || 'col-12',
-              requerido: f.requerido ? 1 : 0,
+          campos: (() => {
+            const usedVars = new Set();
+            return formFields.map((f, idx) => {
+              let cleanVar = String(f.nombre_variable || `var_${idx + 1}`)
+                .trim()
+                .toUpperCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^A-Z0-9_]/g, '_')
+                .substring(0, 80)
+                .replace(/_+$/, '');
+              if (!cleanVar) cleanVar = `VAR_${idx + 1}`;
+
+              let finalVar = cleanVar;
+              let suffix = 1;
+              while (usedVars.has(finalVar)) {
+                suffix++;
+                finalVar = `${cleanVar.substring(0, 74)}_${suffix}`;
+              }
+              usedVars.add(finalVar);
+
+              return {
+                nombre_variable: finalVar,
+                etiqueta: f.etiqueta || (f.tipo_campo === 'heading' ? 'Título de Sección' : `Campo ${idx + 1}`),
+              tipo_campo: f.tipo_campo || 'text',
+              placeholder: f.placeholder || null,
               texto_ayuda: f.texto_ayuda || null,
+              tamano_texto: f.tamano_texto || 'h2',
+              ancho_columna: f.tipo_campo === 'heading' ? 'col-12' : (f.ancho_columna || 'col-md-6'),
+              requerido: f.requerido ? 1 : 0,
+              solo_lectura: f.solo_lectura ? 1 : 0,
               orden: idx + 1,
-              celda_excel: f.celda_excel,
+              celda_excel: (f.modo_mapeo_excel === 'individual') ? null : (f.celda_excel || null),
+              modo_mapeo_excel: f.modo_mapeo_excel || ((f.mapeo_excel_avanzado?.length > 0 && !f.celda_excel) ? 'individual' : 'unica'),
               fuente_contexto: f.fuente_contexto || 'NINGUNO',
-              fuente_columna: f.fuente_columna || null
+              fuente_columna: f.fuente_columna || null,
+              opciones: f.opciones || [],
+              alineacion_opciones: f.alineacion_opciones || (f.tipo_campo === 'radio' ? 'horizontal' : 'vertical'),
+              extensiones_permitidas: f.tipo_campo === 'file' ? (f.extensiones_permitidas || '.jpg, .jpeg, .png, .webp') : (f.extensiones_permitidas || null),
+              tamano_max_mb: f.tamano_max_mb || null,
+              ancho_imagen: f.ancho_imagen || 150,
+              alto_imagen: f.alto_imagen || 120,
+              usar_fecha_actual: f.usar_fecha_actual ? 1 : 0,
+              fecha_minima: f.fecha_minima || null,
+              fecha_maxima: f.fecha_maxima || null,
+              mapeo_excel_avanzado: (f.modo_mapeo_excel === 'unica') ? [] : (f.mapeo_excel_avanzado || []),
+              habilitar_condicion: f.habilitar_condicion ? 1 : 0,
+              condicion_campo: f.condicion_campo || null,
+              condicion_operador: f.condicion_operador || 'igual',
+              condicion_valor: f.condicion_valor || null,
+              condicion_accion: f.condicion_accion || 'mostrar',
+              reglas_transformacion: JSON.stringify({
+                habilitar: f.habilitar_condicion_llenado ? 1 : 0,
+                campo_objetivo: f.campo_objetivo_llenado || 'self',
+                reglas: f.reglas_llenado || []
+              }),
+              campo_objetivo: f.campo_objetivo_llenado || null,
+              habilitar_condicion_llenado: f.habilitar_condicion_llenado ? 1 : 0
             };
-            if (f.tipo_campo === 'heading') {
-              return { ...base, tipo_campo: 'heading', etiqueta: f.etiqueta };
-            }
-            if (['select', 'radio', 'checkbox'].includes(f.tipo_campo)) {
-              return { ...base, opciones: f.opciones || [] };
-            }
-            return base;
-          })
-        }
+          });
+        })()
+      }
       ]
     };
 
@@ -203,55 +354,181 @@ function FormBuilderWrapper() {
   };
 
   return (
-    <div className="app-container" style={{ height: '100vh', display: 'flex' }}>
+    <div className="app-container" style={{ height: '100vh', display: 'flex', overflow: 'hidden', backgroundColor: '#f1f5f9' }}>
+      
+      {/* 1. Columna Izquierda: Paleta de Herramientas */}
       <SidebarTools onAddField={handleAddField} />
-      <div className="canvas-area" style={{ flex: 1, display: 'block', backgroundColor: '#f1f5f9', overflowY: 'auto' }}>
-        <div className="header-toolbar" style={{ margin: '0 auto', maxWidth: '1200px', display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1rem 2rem', backgroundColor: 'white', borderBottom: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <input 
-                value={formName} 
-                onChange={e => setFormName(e.target.value)}
-                style={{ fontSize: '1.25rem', fontWeight: 'bold', border: 'none', borderBottom: '1px solid #cbd5e1', padding: '0.2rem', width: '300px' }}
-                placeholder="Nombre del Formulario"
-              />
+
+      {/* 2. Columna Central: Lienzo de Trabajo */}
+      <div className="canvas-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundColor: '#f1f5f9', overflowY: 'auto', padding: '1.25rem 2rem' }}>
+        
+        {/* Barra Superior Flotante del Formulario */}
+        <div style={{
+          width: '100%',
+          maxWidth: '1050px',
+          margin: '0 auto 1.5rem auto',
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 4px 15px -3px rgba(0, 0, 0, 0.05)',
+          padding: '1.25rem 1.75rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1rem'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: '300px' }}>
+              <button 
+                onClick={() => navigate('/admin/formularios')} 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: '#64748b', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.4rem', 
+                  fontSize: '0.85rem', 
+                  fontWeight: 700,
+                  padding: '0.4rem 0.6rem',
+                  borderRadius: '8px'
+                }}
+                className="hover:bg-slate-100"
+                title="Regresar a Gestión de Formularios"
+              >
+                <ArrowLeft size={16} /> Volver
+              </button>
+
+              <div style={{ width: '1px', height: '20px', backgroundColor: '#e2e8f0' }}></div>
+
+              <div style={{ flex: 1 }}>
+                <input 
+                  value={formName} 
+                  onChange={e => setFormName(e.target.value)}
+                  style={{ 
+                    fontSize: '1.35rem', 
+                    fontWeight: 800, 
+                    border: 'none', 
+                    borderBottom: '2px solid #059669', 
+                    padding: '0.2rem 0.5rem', 
+                    width: '100%', 
+                    color: '#0f172a', 
+                    outline: 'none', 
+                    backgroundColor: '#f8fafc', 
+                    borderRadius: '6px 6px 0 0',
+                    letterSpacing: '-0.3px'
+                  }}
+                  placeholder="Escribe el nombre oficial del formulario..."
+                />
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => navigate('/admin/formularios')} style={{ padding: '0.5rem 1rem', background: '#e2e8f0', color: '#475569', fontWeight: 600, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
-              <button className="btn btn-primary glass" onClick={saveForm} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', background: '#3b82f6', color: 'white', fontWeight: 600, border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                <Save size={18} /> Guardar
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <button 
+                onClick={() => navigate('/admin/formularios')} 
+                className="btn btn-secondary"
+                style={{ padding: '0.6rem 1.1rem', fontSize: '0.88rem', fontWeight: 600 }}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={saveForm}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  padding: '0.6rem 1.4rem', 
+                  fontSize: '0.9rem', 
+                  fontWeight: 700,
+                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                }}
+              >
+                <Save size={17} /> Guardar Formato
               </button>
             </div>
           </div>
           
-          {!docId && !id && (
-            <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', padding: '0.75rem 1rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#475569', margin: 0 }}>Etapa Institucional:</label>
-                <select value={etapa} onChange={e => setEtapa(e.target.value)} style={{ padding: '0.4rem', borderRadius: '4px', border: '1px solid #cbd5e1', backgroundColor: 'white', fontSize: '0.875rem', outline: 'none' }}>
-                  <option value="INICIAL">INICIAL</option>
-                  <option value="BIMESTRE_1">BIMESTRE 1</option>
-                  <option value="BIMESTRE_2">BIMESTRE 2</option>
-                  <option value="BIMESTRE_3">BIMESTRE 3</option>
-                  <option value="FINAL">FINAL</option>
+          {/* Fila de Metadatos: Etapa, Plantilla y Estado */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Etapa:</label>
+                <select 
+                  value={etapa} 
+                  onChange={e => setEtapa(e.target.value)} 
+                  className="form-select" 
+                  style={{ width: 'auto', padding: '0.3rem 0.75rem', fontSize: '0.82rem', fontWeight: 700, color: '#065f46', borderColor: '#a7f3d0', backgroundColor: '#ecfdf5', cursor: 'pointer' }}
+                  title="Etapa del proceso de servicio social a la que pertenece este formato"
+                >
+                  <option value="APERTURA">APERTURA</option>
+                  <option value="BIMESTRE 1">BIMESTRE 1</option>
+                  <option value="BIMESTRE 2">BIMESTRE 2</option>
+                  <option value="BIMESTRE 3">BIMESTRE 3</option>
+                  <option value="LIBERACION">LIBERACIÓN</option>
                 </select>
               </div>
-              <div style={{ width: '1px', height: '24px', backgroundColor: '#cbd5e1' }}></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#475569', margin: 0 }}>Plantilla Oficial (Word/Excel):</label>
-                <input type="file" onChange={e => setPlantillaFile(e.target.files[0])} accept=".xlsx,.docx" style={{ fontSize: '0.875rem', color: '#64748b' }} />
-              </div>
+
+              {!docId && !id && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Plantilla Excel/Word:</label>
+                  <input 
+                    type="file" 
+                    onChange={e => setPlantillaFile(e.target.files[0])} 
+                    accept=".xlsx,.docx" 
+                    style={{ fontSize: '0.82rem', color: '#64748b' }} 
+                  />
+                </div>
+              )}
+
+              {(docId || id) && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.35rem 0.85rem', backgroundColor: '#ecfdf5', color: '#065f46', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, border: '1px solid #a7f3d0' }}>
+                  <CheckCircle2 size={14} color="#059669" />
+                  <span>Documento Oficial Vinculado en el Catálogo</span>
+                </div>
+              )}
             </div>
-          )}
-          {(docId || id) && (
-            <div style={{ padding: '0.5rem 1rem', backgroundColor: '#f0fdf4', color: '#166534', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 600, border: '1px solid #bbf7d0' }}>
-              Documento Oficial Vinculado
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#64748b' }}>
+              <span>Campos en el lienzo: <strong>{formFields.length}</strong></span>
             </div>
-          )}
+          </div>
         </div>
 
+        {/* Lienzo estilo Documento Oficial */}
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <div className="form-canvas">
+          <div className="form-canvas" style={{
+            maxWidth: '1050px',
+            margin: '0 auto',
+            backgroundColor: '#ffffff',
+            borderRadius: '20px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+            border: '1px solid #e2e8f0',
+            padding: '2.5rem',
+            minHeight: '600px'
+          }}>
+            {/* Membrete del Lienzo */}
+            <div style={{
+              borderBottom: '2px solid #059669',
+              paddingBottom: '1.25rem',
+              marginBottom: '2rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end'
+            }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '0.25rem' }}>
+                  Instituto Tecnológico Superior de Teziutlán
+                </div>
+                <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
+                  {formName || 'Vista Previa del Formato Digital'}
+                </h2>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                Simulación en tiempo real
+              </div>
+            </div>
+
             <SortableContext items={formFields} strategy={verticalListSortingStrategy}>
               <FormBuilderCanvas 
                 fields={formFields} 
@@ -263,16 +540,11 @@ function FormBuilderWrapper() {
                 onMoveField={handleMoveField}
               />
             </SortableContext>
-            {formFields.length === 0 && (
-              <div style={{textAlign: 'center', color: '#94a3b8', marginTop: '4rem'}}>
-                <p>Arrastra campos aquí o haz clic en la barra lateral para agregarlos.</p>
-              </div>
-            )}
           </div>
         </DndContext>
       </div>
 
-      {/* Columna 3: Propiedades */}
+      {/* 3. Columna Derecha: Panel de Propiedades y Smart Data */}
       <PropertiesPanel 
         selectedField={selectedField} 
         onUpdateField={updateField} 
@@ -283,3 +555,4 @@ function FormBuilderWrapper() {
 }
 
 export default FormBuilderWrapper;
+
