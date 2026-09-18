@@ -402,6 +402,27 @@ def delete_aviso_general(id_aviso):
         cursor.close()
         conn.close()
 
+@avisos_bp.route('/avisos-generales/todos', methods=['DELETE'])
+def delete_todos_avisos():
+    conn = get_db()
+    if not conn:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM avisos_generales")
+        conn.commit()
+        total_borrados = cursor.rowcount
+        return jsonify({
+            "message": f"Se eliminaron todos los avisos generales ({total_borrados} comunicados eliminados).",
+            "total_eliminados": total_borrados
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
 # ----------------------------------------------------
 # 3. HISTORIAL DE CORREOS Y NOTIFICACIONES ENVIADAS
 # ----------------------------------------------------
@@ -419,6 +440,44 @@ def get_historial():
                 h['fecha_envio'] = h['fecha_envio'].strftime('%Y-%m-%d %H:%M:%S')
         return jsonify(historial), 200
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@avisos_bp.route('/historial-notificaciones/<int:id_notificacion>', methods=['DELETE'])
+def delete_notificacion_individual(id_notificacion):
+    conn = get_db()
+    if not conn:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM historial_notificaciones_correo WHERE id_notificacion = %s", (id_notificacion,))
+        conn.commit()
+        return jsonify({"message": "Registro de notificación eliminado exitosamente"}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@avisos_bp.route('/historial-notificaciones/todos', methods=['DELETE'])
+def delete_todo_historial():
+    conn = get_db()
+    if not conn:
+        return jsonify({"error": "Error de conexión a la base de datos"}), 500
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM historial_notificaciones_correo")
+        conn.commit()
+        total_borrados = cursor.rowcount
+        return jsonify({
+            "message": f"Se vació el historial de notificaciones ({total_borrados} registros eliminados).",
+            "total_eliminados": total_borrados
+        }), 200
+    except Exception as e:
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
