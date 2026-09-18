@@ -43,9 +43,8 @@ export default function ExpedienteEstudiante() {
     fetchExpediente();
   }, []);
 
-  const handleDownload = (clave) => {
-    const noCtrl = expedienteData.no_control || '23TE0037';
-    window.open(`http://localhost:5000/api/generador/generar/${clave}?no_control=${noCtrl}`, '_blank');
+  const handleDownload = (id_documento) => {
+    window.open(`http://localhost:5000/api/alumno/formatos/descargar-plantilla/${id_documento}`, '_blank');
   };
 
   const getStatusBadge = (estado) => {
@@ -222,7 +221,7 @@ export default function ExpedienteEstudiante() {
                       )}
                       {doc.plantilla_existe === 1 && !isBlocked && (
                         <button 
-                          onClick={() => handleDownload(doc.clave)}
+                          onClick={() => handleDownload(doc.id_documento)}
                           className="btn btn-secondary"
                           style={{ flex: 'initial', fontSize: '0.82rem', padding: '0.5rem 0.8rem' }}
                           title="Descargar plantilla oficial"

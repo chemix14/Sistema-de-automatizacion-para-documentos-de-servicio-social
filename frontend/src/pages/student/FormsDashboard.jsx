@@ -43,7 +43,7 @@ export default function FormsDashboard() {
       });
   }, []);
 
-  const handleDownload = (clave, estado) => {
+  const handleDownload = (id_documento, clave, estado) => {
     if (estado === 'BLOQUEADO') {
       Swal.fire({
         title: 'Formato Bloqueado',
@@ -53,7 +53,7 @@ export default function FormsDashboard() {
       });
       return;
     }
-    window.open(`http://localhost:5000/api/generador/generar/${clave}`, '_blank');
+    window.open(`http://localhost:5000/api/alumno/formatos/descargar-plantilla/${id_documento}`, '_blank');
   };
 
   const handleOpenForm = (id_formulario, estado, clave, nombre) => {
@@ -253,7 +253,7 @@ export default function FormsDashboard() {
                   )}
                   {doc.plantilla_existe === 1 && (
                     <button 
-                      onClick={() => handleDownload(doc.clave, doc.estado)} 
+                      onClick={() => handleDownload(doc.id_documento, doc.clave, doc.estado)} 
                       className="btn btn-secondary"
                       style={{ 
                         flex: 'initial', 

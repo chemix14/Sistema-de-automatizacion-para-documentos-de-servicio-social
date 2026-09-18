@@ -144,13 +144,13 @@ export default function GestionFormularios() {
   // Desvincular el archivo de plantilla oficial de este formato
   const handleUnlinkTemplate = (id_documento, nombre_documento, plantilla_excel) => {
     Swal.fire({
-      title: '¿Desvincular Plantilla Oficial?',
-      html: `¿Deseas desvincular el archivo <b>${plantilla_excel || 'actual'}</b> del formato <b>"${nombre_documento}"</b>?<br/><br/><span style="color: #64748b; font-size: 0.85rem;">El formato oficial quedará sin plantilla asociada hasta que subas un archivo nuevo.</span>`,
+      title: '¿Desvincular y Eliminar Plantilla?',
+      html: `¿Deseas desvincular y eliminar el archivo <b>${plantilla_excel || 'actual'}</b> del formato <b>"${nombre_documento}"</b>?<br/><br/><span style="color: #dc2626; font-size: 0.85rem;">El archivo se eliminará del servidor y el formato oficial quedará sin plantilla asociada hasta que subas un archivo nuevo.</span>`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#f59e0b',
+      confirmButtonColor: '#ef4444',
       cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Sí, desvincular plantilla',
+      confirmButtonText: 'Sí, desvincular y eliminar',
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
@@ -160,7 +160,7 @@ export default function GestionFormularios() {
         .then(res => res.json())
         .then(data => {
           if (!data.error) {
-            Swal.fire('¡Plantilla Desvinculada!', data.message || 'La plantilla oficial ha sido desvinculada exitosamente.', 'success');
+            Swal.fire('¡Plantilla Eliminada!', data.message || 'La plantilla oficial ha sido desvinculada y eliminada del servidor.', 'success');
             setCatalog(prev => prev.map(d => d.id_documento === id_documento ? { ...d, plantilla_existe: 0, plantilla_excel: null } : d));
           } else {
             Swal.fire('Error', data.error, 'error');

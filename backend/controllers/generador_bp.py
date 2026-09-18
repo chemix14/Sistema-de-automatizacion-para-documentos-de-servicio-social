@@ -136,8 +136,8 @@ def generar_documento(clave):
             wb.save(salida_path)
             return send_file(salida_path, as_attachment=True)
 
-        elif clave == 'FRPS03':
-            plantilla_path = os.path.join(PLANTILLAS_DIR, "F-RPS-03_ CARTA COMPROMISO.xlsx")
+        elif clave in ['FRPS03', 'CARTAC']:
+            plantilla_path = os.path.join(PLANTILLAS_DIR, "3._F-RPS-03__CARTA_COMPROMISO.xlsx")
             if not os.path.exists(plantilla_path): return jsonify({"error": "Plantilla no encontrada"}), 404
             
             wb = openpyxl.load_workbook(plantilla_path)
@@ -175,8 +175,8 @@ def generar_documento(clave):
             wb.save(salida_path)
             return send_file(salida_path, as_attachment=True)
 
-        elif clave == 'FRPS08':
-            plantilla_path = os.path.join(PLANTILLAS_DIR, "6. F-RPS-08_ BASES DE CONCERTACIÓN.xlsx")
+        elif clave in ['FRPS08', 'BASES']:
+            plantilla_path = os.path.join(PLANTILLAS_DIR, "6._F-RPS-08__BASES_DE_CONCERTACION.xlsx")
             if not os.path.exists(plantilla_path): return jsonify({"error": "Plantilla no encontrada"}), 404
             
             wb = openpyxl.load_workbook(plantilla_path)
@@ -243,61 +243,23 @@ def generar_documento(clave):
             wb.save(salida_path)
             return send_file(salida_path, as_attachment=True)
 
-        elif clave == 'DRPS01':
-            plantilla_path = os.path.join(PLANTILLAS_DIR, "4.3 D-RPS-01 Plan de Trabajo.docx")
+        elif clave in ['DRPS01', 'PLANDE']:
+            plantilla_path = os.path.join(PLANTILLAS_DIR, "4.3_D-RPS-01_Plan_de_Trabajo.doc")
             if not os.path.exists(plantilla_path): return jsonify({"error": "Plantilla no encontrada"}), 404
-            
-            cursor.execute("SELECT * FROM planes_trabajo WHERE id_proyecto = %s", (datos['id_proyecto'],))
-            plan = cursor.fetchone() or {
-                'objetivo_general': datos.get('objetivo') or 'Desarrollar las actividades asignadas de acuerdo al programa de servicio social.',
-                'antecedentes': 'Proyecto institucional de vinculación.',
-                'objetivos_particulares': 'Cumplir en tiempo y forma con el cronograma.',
-                'alcances': 'Impacto favorable en la comunidad y fortalecimiento de competencias.'
-            }
+            return send_file(plantilla_path, as_attachment=True, download_name=f"Plan_Trabajo_{no_control}.doc")
 
-            doc = Document(plantilla_path)
-            
-            # Simple replace in paragraphs
-            reemplazos = {
-                "NOMBRE DE LA DEPENDENCIA DONDE REALIZA": datos.get('dep_nombre') or "",
-                "(COLOCAR EL TÍTULO CORRECTO, EN BASE AL TÍTULO QUE ENTREGO EN SU FORMATO DE SOLICITUD DE SERVICIO SOCIAL Y QUE SE LE SELLO DE RECIBIDO)": datos.get('nombre_proyecto') or "",
-                "3 DE NOVIEMBRE DE 2025 – 6 DE MAYO DE 2026": f"{f_inicio_str} - {f_fin_str}",
-                "NOMBRE DEL PRESTANTE": f"NOMBRE DEL PRESTANTE: {datos.get('nombre')}",
-                "NÚMERO DE CONTROL": f"NÚMERO DE CONTROL: {datos.get('no_control')}",
-                "CARRERA": f"CARRERA: {datos.get('carrera')}",
-                "MODALIDAD": f"MODALIDAD: {datos.get('modalidad')}",
-                "(media cuartilla)": plan.get('antecedentes') or "",
-                "OBJETIVO GENERAL DEL PROYECTO": "OBJETIVO GENERAL DEL PROYECTO\n" + (plan.get('objetivo_general') or ""),
-                "OBJETIVOS PARTICULARES DEL PROYECTO": "OBJETIVOS PARTICULARES DEL PROYECTO\n" + (plan.get('objetivos_particulares') or ""),
-                "(máximo 1 cuartilla)": plan.get('alcances') or ""
-            }
-
-            for p in doc.paragraphs:
-                for k, v in reemplazos.items():
-                    if k in p.text:
-                        p.text = p.text.replace(k, str(v))
-
-            # Tabla actividades
-            for t in doc.tables:
-                for row in t.rows:
-                    for cell in row.cells:
-                        if "Coloque la Actividad 1" in cell.text:
-                            cell.text = cell.text.replace("Coloque la Actividad 1 del documento F-RPS-01", actividades[0])
-                        elif "Coloque la Actividad 2" in cell.text:
-                            cell.text = cell.text.replace("Coloque la Actividad 2 del documento F-RPS-01", actividades[1])
-                        elif "Coloque la Actividad 3" in cell.text:
-                            cell.text = cell.text.replace("Coloque la Actividad 3 del documento F-RPS-01", actividades[2])
-
-            salida_path = os.path.join(GENERADOS_DIR, f"{clave}_{no_control}.docx")
-            doc.save(salida_path)
-            return send_file(salida_path, as_attachment=True)
-
-        elif clave.startswith('FRPS04'):
+        elif clave.startswith('FRPS04') or clave.startswith('REPORT'):
             bimestre = 1
             if '2' in clave: bimestre = 2
             elif '3' in clave: bimestre = 3
             
-            plantilla_path = os.path.join(PLANTILLAS_DIR, f"FRPS04_{bimestre}.xlsx")
+            if bimestre == 1:
+                plantilla_path = os.path.join(PLANTILLAS_DIR, "7._F-RPS-04__REPORTE_BIMESTRAL_DE_SERVICIO_SOCIAL_1er_Bimestre1.xlsx")
+            elif bimestre == 2:
+                plantilla_path = os.path.join(PLANTILLAS_DIR, "7._F-RPS-04__REPORTE_BIMESTRAL_DE_SERVICIO_SOCIAL_2er_Bimestre.xlsx")
+            else:
+                plantilla_path = os.path.join(PLANTILLAS_DIR, "7._F-RPS-04__REPORTE_BIMESTRAL_DE_SERVICIO_SOCIAL_3er_Bimestre.xlsx")
+                
             if not os.path.exists(plantilla_path): return jsonify({"error": "Plantilla no encontrada"}), 404
             
             cursor.execute("SELECT * FROM reportes_bimestrales WHERE id_proyecto = %s AND bimestre = %s", (datos['id_proyecto'], bimestre))
@@ -358,12 +320,18 @@ def generar_documento(clave):
             wb.save(salida_path)
             return send_file(salida_path, as_attachment=True)
 
-        elif clave.startswith('FRPS05'):
+        elif clave.startswith('FRPS05') or clave.startswith('AUTOEV'):
             bimestre = 1
             if '2' in clave: bimestre = 2
             elif '3' in clave: bimestre = 3
             
-            plantilla_path = os.path.join(PLANTILLAS_DIR, f"FRPS05_{bimestre}.xlsx")
+            if bimestre == 1:
+                plantilla_path = os.path.join(PLANTILLAS_DIR, "8._F-RPS-05__AUTOEVALUACION_CUALITATIVA_1er_Bimestre1.xlsx")
+            elif bimestre == 2:
+                plantilla_path = os.path.join(PLANTILLAS_DIR, "COPIA_132880_7._F-RPS-04__REPORTE_BIME.xlsx")
+            else:
+                plantilla_path = os.path.join(PLANTILLAS_DIR, "COPIA_206002_COPIA_132880_7._F-RPS-04_.xlsx")
+                
             if not os.path.exists(plantilla_path): return jsonify({"error": "Plantilla no encontrada"}), 404
             
             cursor.execute("SELECT calificaciones_json, respuestas_impacto_json, observaciones FROM evaluaciones_cualitativas WHERE id_proyecto = %s AND bimestre = %s AND tipo_evaluador = 'ALUMNO'", (datos['id_proyecto'], bimestre))

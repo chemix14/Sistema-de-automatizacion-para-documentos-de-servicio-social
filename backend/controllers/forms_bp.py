@@ -16,6 +16,35 @@ def get_db():
     db = Database()
     return db.get_connection()
 
+def eliminar_archivo_plantilla_si_huerfano(filename, cursor=None):
+    """
+    Elimina físicamente el archivo de la carpeta PLANTILLAS_DIR si ningún otro
+    documento en catalogo_documentos lo tiene referenciado.
+    """
+    if not filename:
+        return False
+        
+    try:
+        if cursor:
+            cursor.execute("""
+                SELECT COUNT(*) as total 
+                FROM catalogo_documentos 
+                WHERE plantilla_excel = %s OR ruta_archivo_excel = %s
+            """, (filename, filename))
+            res = cursor.fetchone()
+            total = res['total'] if isinstance(res, dict) else (res[0] if res else 0)
+            if total > 0:
+                return False
+                
+        file_path = os.path.join(PLANTILLAS_DIR, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"[PLANTILLAS] Archivo eliminado físicamente del servidor: {filename}")
+            return True
+    except Exception as err:
+        print(f"[PLANTILLAS] Error al eliminar archivo {filename}: {err}")
+    return False
+
 def ensure_json_str(val, default=None):
     if val is None:
         return default
@@ -109,8 +138,13 @@ def create_form():
         if id_documento:
             id_doc = int(id_documento)
             if nombre_archivo_plantilla:
+                cursor.execute("SELECT plantilla_excel, ruta_archivo_excel FROM catalogo_documentos WHERE id_documento=%s", (id_doc,))
+                prev_doc = cursor.fetchone()
+                prev_fn = (prev_doc.get('plantilla_excel') or prev_doc.get('ruta_archivo_excel')) if prev_doc else None
                 cursor.execute("UPDATE catalogo_documentos SET plantilla_excel=%s, ruta_archivo_excel=%s, etapa=%s WHERE id_documento=%s",
                                (nombre_archivo_plantilla, nombre_archivo_plantilla, etapa, id_doc))
+                if prev_fn and prev_fn != nombre_archivo_plantilla:
+                    eliminar_archivo_plantilla_si_huerfano(prev_fn, cursor)
             else:
                 cursor.execute("UPDATE catalogo_documentos SET etapa=%s WHERE id_documento=%s", (etapa, id_doc))
         else:
@@ -298,10 +332,16 @@ def get_or_modify_form(id):
             
             # Si subió plantilla nueva
             if plantilla_file and plantilla_file.filename:
+                cursor.execute("SELECT plantilla_excel, ruta_archivo_excel FROM catalogo_documentos WHERE id_documento=%s", (id_doc,))
+                prev_d = cursor.fetchone()
+                prev_name = (prev_d.get('plantilla_excel') or prev_d.get('ruta_archivo_excel')) if prev_d else None
+
                 nombre_archivo_plantilla = secure_filename(plantilla_file.filename)
                 plantilla_file.save(os.path.join(PLANTILLAS_DIR, nombre_archivo_plantilla))
                 cursor.execute("UPDATE catalogo_documentos SET plantilla_excel=%s, ruta_archivo_excel=%s WHERE id_documento=%s",
                                (nombre_archivo_plantilla, nombre_archivo_plantilla, id_doc))
+                if prev_name and prev_name != nombre_archivo_plantilla:
+                    eliminar_archivo_plantilla_si_huerfano(prev_name, cursor)
                                
             # Actualizar datos del formulario
             etapas_validas = ['APERTURA', 'BIMESTRE 1', 'BIMESTRE 2', 'BIMESTRE 3', 'LIBERACION']
@@ -401,14 +441,24 @@ def upload_template(id_documento):
     if not conn:
         return jsonify({"error": "Error de conexión"}), 500
         
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
     try:
+        # Obtener plantilla previa
+        cursor.execute("SELECT plantilla_excel, ruta_archivo_excel FROM catalogo_documentos WHERE id_documento = %s", (id_documento,))
+        prev_doc = cursor.fetchone()
+        prev_filename = (prev_doc.get('plantilla_excel') or prev_doc.get('ruta_archivo_excel')) if prev_doc else None
+
         filename = secure_filename(file.filename)
         file.save(os.path.join(PLANTILLAS_DIR, filename))
         
         cursor.execute("UPDATE catalogo_documentos SET plantilla_excel=%s, ruta_archivo_excel=%s WHERE id_documento=%s",
                        (filename, filename, id_documento))
         conn.commit()
+
+        # Si había una plantilla previa diferente, eliminarla del disco si ya nadie la usa
+        if prev_filename and prev_filename != filename:
+            eliminar_archivo_plantilla_si_huerfano(prev_filename, cursor)
+
         return jsonify({"message": "Plantilla vinculada exitosamente", "filename": filename}), 200
     except Exception as e:
         conn.rollback()
@@ -423,11 +473,24 @@ def unlink_template(id_documento):
     if not conn:
         return jsonify({"error": "Error de conexión a la base de datos"}), 500
         
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
     try:
+        # 1. Obtener la plantilla actual antes de desvincular
+        cursor.execute("SELECT plantilla_excel, ruta_archivo_excel FROM catalogo_documentos WHERE id_documento = %s", (id_documento,))
+        doc = cursor.fetchone()
+        nombre_archivo = (doc.get('plantilla_excel') or doc.get('ruta_archivo_excel')) if doc else None
+
+        # 2. Desvincular en la base de datos
         cursor.execute("UPDATE catalogo_documentos SET plantilla_excel = NULL, ruta_archivo_excel = NULL WHERE id_documento = %s", (id_documento,))
         conn.commit()
-        return jsonify({"message": "Plantilla oficial desvinculada exitosamente"}), 200
+
+        # 3. Eliminar el archivo físico de la plantilla si ya ningún otro formato la utiliza
+        eliminado = False
+        if nombre_archivo:
+            eliminado = eliminar_archivo_plantilla_si_huerfano(nombre_archivo, cursor)
+
+        msg = "Plantilla oficial desvinculada y archivo eliminado del servidor exitosamente" if eliminado else "Plantilla oficial desvinculada exitosamente"
+        return jsonify({"message": msg, "eliminado": eliminado}), 200
     except Exception as e:
         conn.rollback()
         return jsonify({"error": str(e)}), 500
@@ -760,12 +823,17 @@ def delete_documento_completo(id_documento):
         cursor.execute("DELETE FROM secciones_documento WHERE id_documento = %s", (id_documento,))
         
         # 4. Eliminar el documento del catálogo
-        cursor.execute("SELECT clave_formato FROM catalogo_documentos WHERE id_documento = %s", (id_documento,))
+        cursor.execute("SELECT clave_formato, plantilla_excel, ruta_archivo_excel FROM catalogo_documentos WHERE id_documento = %s", (id_documento,))
         doc = cursor.fetchone()
+        arch_plantilla = (doc.get('plantilla_excel') or doc.get('ruta_archivo_excel')) if doc else None
         
         cursor.execute("DELETE FROM catalogo_documentos WHERE id_documento = %s", (id_documento,))
         conn.commit()
         
+        # Eliminar físicamente el archivo del servidor si nadie más lo usa
+        if arch_plantilla:
+            eliminar_archivo_plantilla_si_huerfano(arch_plantilla, cursor)
+            
         clave = doc['clave_formato'] if doc else id_documento
         return jsonify({"message": f"Documento '{clave}' y su configuración eliminados exitosamente del catálogo."}), 200
     except Exception as e:
